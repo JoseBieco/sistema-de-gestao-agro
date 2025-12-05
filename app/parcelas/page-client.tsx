@@ -32,9 +32,13 @@ import {
   AlertCircle,
   CheckCircle,
   Loader2,
+  FileImage,
+  Printer,
 } from "lucide-react";
 import type { Parcela, Transacao, Parceiro } from "@/lib/types/database";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { ReceiptDialog } from "@/components/financial/receipt-dialog";
+import { ImageViewDialog } from "@/components/ui/image-view-dialog";
 
 type ParcelaExtended = Parcela & {
   transacao?: Transacao & {
@@ -62,7 +66,22 @@ export function ParcelasPageClient({
     data_baixa_promissoria: "",
   });
   // Adicionar estado para imagem da promissória no modal de pagamento
-  const [fotoPromissoria, setFotoPromissoria] = useState("");
+  const [fotoPromissoria, setFotoPromissoria] = useState<File | null>(null);
+
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [receiptParcela, setReceiptParcela] = useState<ParcelaExtended | null>(
+    null
+  );
+
+  // Estado para Visualizar Imagem
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+
+  // Função auxiliar
+  function openImageView(url: string) {
+    setSelectedImageUrl(url);
+    setImageViewerOpen(true);
+  }
 
   async function refreshParcelas() {
     const { data } = await supabase
@@ -89,8 +108,13 @@ export function ParcelasPageClient({
       data_pagamento: new Date().toISOString().split("T")[0],
       data_baixa_promissoria: "",
     });
-    setFotoPromissoria(parcela.foto_promissoria_frente_url || ""); // Carrega se já existir
+    setFotoPromissoria(null); // FIX: Carrega se já existir
     setPaymentDialogOpen(true);
+  }
+
+  function openReceiptDialog(parcela: ParcelaExtended) {
+    setReceiptParcela(parcela);
+    setReceiptDialogOpen(true);
   }
 
   async function handlePayment() {
@@ -125,6 +149,10 @@ export function ParcelasPageClient({
 
       await refreshParcelas();
       setPaymentDialogOpen(false);
+
+      // Abrir recibo automaticamente após pagar
+      // const updatedParcela = { ...selectedParcela, status: 'pago' as const, data_pagamento: paymentData.data_pagamento }
+      // openReceiptDialog(updatedParcela)
     } catch (error) {
       console.error("Erro ao registrar pagamento:", error);
     } finally {
@@ -302,16 +330,46 @@ export function ParcelasPageClient({
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {p.status !== "pago" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openPaymentDialog(p)}
-                            >
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Baixar
-                            </Button>
-                          )}
+                          <div className="flex gap-1">
+                            {p.status !== "pago" ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openPaymentDialog(p)}
+                              >
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Baixar
+                              </Button>
+                            ) : (
+                              <>
+                                {/* Botão 1: Gerar Recibo do Sistema */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openReceiptDialog(p)}
+                                  title="Gerar Recibo do Sistema"
+                                >
+                                  <Printer className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+
+                                {/* Botão 2: Ver Imagem Anexada (Só aparece se tiver foto) */}
+                                {p.foto_promissoria_frente_url && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      openImageView(
+                                        p.foto_promissoria_frente_url!
+                                      )
+                                    }
+                                    title="Ver Promissória Anexada"
+                                  >
+                                    <FileImage className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -394,9 +452,8 @@ export function ParcelasPageClient({
             <div className="pt-2">
               <ImageUpload
                 label="Foto da Promissória (Recibo)"
-                value={fotoPromissoria}
-                onChange={(url) => setFotoPromissoria(url)}
-                onRemove={() => setFotoPromissoria("")}
+                initialUrl={selectedParcela?.foto_promissoria_frente_url}
+                onFileChange={(file) => setFotoPromissoria(file)}
               />
             </div>
           </div>
@@ -414,6 +471,19 @@ export function ParcelasPageClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Componente de Recibo */}
+      <ReceiptDialog
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        parcela={receiptParcela}
+      />
+
+      <ImageViewDialog
+        open={imageViewerOpen}
+        onOpenChange={setImageViewerOpen}
+        url={selectedImageUrl}
+        title="Promissória / Comprovante Anexado"
+      />
     </div>
   );
 }
