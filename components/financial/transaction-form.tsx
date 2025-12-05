@@ -1,42 +1,59 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { formatCurrency } from "@/lib/utils/format"
-import { Loader2, Save, X, Plus, Trash2 } from "lucide-react"
-import type { Parceiro, Animal, TipoTransacao, FormaPagamento } from "@/lib/types/database"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatCurrency } from "@/lib/utils/format";
+import { Loader2, Save, X, Plus, Trash2 } from "lucide-react";
+import type {
+  Parceiro,
+  Animal,
+  TipoTransacao,
+  FormaPagamento,
+} from "@/lib/types/database";
+import { ImageUpload } from "../ui/image-upload";
+import { uploadFile } from "@/lib/utils/upload";
 
 interface PriceGroup {
-  id: string
-  valor_unitario: string
-  quantidade_animais: number
-  descricao: string
-  animais_ids: string[]
+  id: string;
+  valor_unitario: string;
+  quantidade_animais: number;
+  descricao: string;
+  animais_ids: string[];
 }
 
 interface TransactionFormProps {
-  tipo: TipoTransacao
-  onSuccess?: () => void
-  onCancel?: () => void
+  tipo: TipoTransacao;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormProps) {
-  const router = useRouter()
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [parceiros, setParceiros] = useState<Parceiro[]>([])
-  const [animais, setAnimais] = useState<Animal[]>([])
+export function TransactionForm({
+  tipo,
+  onSuccess,
+  onCancel,
+}: TransactionFormProps) {
+  const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [parceiros, setParceiros] = useState<Parceiro[]>([]);
+  const [animais, setAnimais] = useState<Animal[]>([]);
 
   const [formData, setFormData] = useState({
     parceiro_id: "",
@@ -44,18 +61,28 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
     qtd_parcelas: 1,
     forma_pagamento: "dinheiro" as FormaPagamento,
     observacoes: "",
-  })
+  });
 
   const [priceGroups, setPriceGroups] = useState<PriceGroup[]>([
-    { id: "1", valor_unitario: "", quantidade_animais: 0, descricao: "", animais_ids: [] },
-  ])
+    {
+      id: "1",
+      valor_unitario: "",
+      quantidade_animais: 0,
+      descricao: "",
+      animais_ids: [],
+    },
+  ]);
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData();
+  }, []);
+
+  // Adicionar novos estados para as imagens
+  const [gtaFile, setGtaFile] = useState<File | null>(null);
+  const [notaFile, setNotaFile] = useState<File | null>(null);
 
   async function loadData() {
-    const parceiroTipo = tipo === "compra" ? "vendedor" : "comprador"
+    const parceiroTipo = tipo === "compra" ? "vendedor" : "comprador";
 
     const [parceirosRes, animaisRes] = await Promise.all([
       supabase
@@ -69,10 +96,10 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
         .select("id, numero_brinco, nome, genero")
         .eq("status", tipo === "compra" ? "ativo" : "ativo")
         .order("numero_brinco"),
-    ])
+    ]);
 
-    if (parceirosRes.data) setParceiros(parceirosRes.data)
-    if (animaisRes.data) setAnimais(animaisRes.data)
+    if (parceirosRes.data) setParceiros(parceirosRes.data);
+    if (animaisRes.data) setAnimais(animaisRes.data);
   }
 
   function addPriceGroup() {
@@ -85,48 +112,68 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
         descricao: "",
         animais_ids: [],
       },
-    ])
+    ]);
   }
 
   function removePriceGroup(id: string) {
     if (priceGroups.length > 1) {
-      setPriceGroups(priceGroups.filter((g) => g.id !== id))
+      setPriceGroups(priceGroups.filter((g) => g.id !== id));
     }
   }
 
   function updatePriceGroup(id: string, field: keyof PriceGroup, value: any) {
-    setPriceGroups(priceGroups.map((g) => (g.id === id ? { ...g, [field]: value } : g)))
+    setPriceGroups(
+      priceGroups.map((g) => (g.id === id ? { ...g, [field]: value } : g))
+    );
   }
 
   function toggleAnimalInGroup(groupId: string, animalId: string) {
     setPriceGroups(
       priceGroups.map((g) => {
-        if (g.id !== groupId) return g
+        if (g.id !== groupId) return g;
         const newIds = g.animais_ids.includes(animalId)
           ? g.animais_ids.filter((id) => id !== animalId)
-          : [...g.animais_ids, animalId]
-        return { ...g, animais_ids: newIds, quantidade_animais: newIds.length }
-      }),
-    )
+          : [...g.animais_ids, animalId];
+        return { ...g, animais_ids: newIds, quantidade_animais: newIds.length };
+      })
+    );
   }
 
   // Get all selected animal IDs across all groups
-  const selectedAnimalIds = priceGroups.flatMap((g) => g.animais_ids)
-  const availableAnimals = animais.filter((a) => !selectedAnimalIds.includes(a.id))
+  const selectedAnimalIds = priceGroups.flatMap((g) => g.animais_ids);
+  const availableAnimals = animais.filter(
+    (a) => !selectedAnimalIds.includes(a.id)
+  );
 
-  const totalAnimais = priceGroups.reduce((acc, g) => acc + g.quantidade_animais, 0)
+  const totalAnimais = priceGroups.reduce(
+    (acc, g) => acc + g.quantidade_animais,
+    0
+  );
   const valorTotal = priceGroups.reduce(
-    (acc, g) => acc + Number.parseFloat(g.valor_unitario || "0") * g.quantidade_animais,
-    0,
-  )
+    (acc, g) =>
+      acc + Number.parseFloat(g.valor_unitario || "0") * g.quantidade_animais,
+    0
+  );
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (totalAnimais === 0) return
-    setLoading(true)
+    e.preventDefault();
+    if (totalAnimais === 0) return;
+    setLoading(true);
 
     try {
-      // 1. Create transaction
+      // Fazer upload se houverem arquivos
+      let gtaUrl = null;
+      let notaUrl = null;
+
+      if (gtaFile) {
+        gtaUrl = await uploadFile(gtaFile, "documentos");
+      }
+
+      if (notaFile) {
+        notaUrl = await uploadFile(notaFile, "documentos");
+      }
+
+      // Create transaction
       const { data: transacao, error: transacaoError } = await supabase
         .from("transacoes")
         .insert({
@@ -138,15 +185,17 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
           valor_total: valorTotal,
           observacoes: formData.observacoes,
           status: "pendente",
+          gta_url: gtaUrl,
+          nota_fiscal_url: notaUrl,
         })
         .select()
-        .single()
+        .single();
 
-      if (transacaoError) throw transacaoError
+      if (transacaoError) throw transacaoError;
 
-      // 2. Create price groups (itens_transacao)
+      // Create price groups (itens_transacao)
       for (const group of priceGroups) {
-        if (group.animais_ids.length === 0) continue
+        if (group.animais_ids.length === 0) continue;
 
         const { data: item, error: itemError } = await supabase
           .from("itens_transacao")
@@ -157,23 +206,28 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
             descricao: group.descricao,
           })
           .select()
-          .single()
+          .single();
 
-        if (itemError) throw itemError
+        if (itemError) throw itemError;
 
-        // 3. Link animals to transaction
+        // Link animals to transaction
         for (const animalId of group.animais_ids) {
-          const { error: linkError } = await supabase.from("animais_transacao").insert({
-            transacao_id: transacao.id,
-            animal_id: animalId,
-            item_transacao_id: item.id,
-          })
+          const { error: linkError } = await supabase
+            .from("animais_transacao")
+            .insert({
+              transacao_id: transacao.id,
+              animal_id: animalId,
+              item_transacao_id: item.id,
+            });
 
-          if (linkError) throw linkError
+          if (linkError) throw linkError;
 
-          // 4. Update animal status
+          // Update animal status
           if (tipo === "compra") {
-            await supabase.from("animais").update({ compra_id: transacao.id, origem: "comprado" }).eq("id", animalId)
+            await supabase
+              .from("animais")
+              .update({ compra_id: transacao.id, origem: "comprado" })
+              .eq("id", animalId);
           } else {
             await supabase
               .from("animais")
@@ -182,18 +236,18 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                 status: "vendido",
                 data_status: formData.data_negociacao,
               })
-              .eq("id", animalId)
+              .eq("id", animalId);
           }
         }
       }
 
-      // 5. Generate installments
-      const valorParcela = valorTotal / formData.qtd_parcelas
-      const dataBase = new Date(formData.data_negociacao)
+      // Generate installments
+      const valorParcela = valorTotal / formData.qtd_parcelas;
+      const dataBase = new Date(formData.data_negociacao);
 
       for (let i = 0; i < formData.qtd_parcelas; i++) {
-        const dataVencimento = new Date(dataBase)
-        dataVencimento.setDate(dataVencimento.getDate() + (i + 1) * 30)
+        const dataVencimento = new Date(dataBase);
+        dataVencimento.setDate(dataVencimento.getDate() + (i + 1) * 30);
 
         const { error: parcelaError } = await supabase.from("parcelas").insert({
           transacao_id: transacao.id,
@@ -201,18 +255,18 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
           data_vencimento: dataVencimento.toISOString().split("T")[0],
           valor: valorParcela,
           status: "pendente",
-        })
+        });
 
-        if (parcelaError) throw parcelaError
+        if (parcelaError) throw parcelaError;
       }
 
-      onSuccess?.()
-      router.push(tipo === "compra" ? "/compras" : "/vendas")
-      router.refresh()
+      onSuccess?.();
+      router.push(tipo === "compra" ? "/compras" : "/vendas");
+      router.refresh();
     } catch (error) {
-      console.error("Erro ao salvar transação:", error)
+      console.error("Erro ao salvar transação:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -222,12 +276,19 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
         {/* Transaction Info */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Dados da {tipo === "compra" ? "Compra" : "Venda"}</CardTitle>
+            <CardTitle className="text-base">
+              Dados da {tipo === "compra" ? "Compra" : "Venda"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>{tipo === "compra" ? "Vendedor" : "Comprador"}</Label>
-              <Select value={formData.parceiro_id} onValueChange={(v) => setFormData({ ...formData, parceiro_id: v })}>
+              <Select
+                value={formData.parceiro_id}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, parceiro_id: v })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um parceiro" />
                 </SelectTrigger>
@@ -247,14 +308,21 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                 <Input
                   type="date"
                   value={formData.data_negociacao}
-                  onChange={(e) => setFormData({ ...formData, data_negociacao: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      data_negociacao: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Forma de Pagamento</Label>
                 <Select
                   value={formData.forma_pagamento}
-                  onValueChange={(v: FormaPagamento) => setFormData({ ...formData, forma_pagamento: v })}
+                  onValueChange={(v: FormaPagamento) =>
+                    setFormData({ ...formData, forma_pagamento: v })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -277,10 +345,16 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                 type="number"
                 min={1}
                 value={formData.qtd_parcelas}
-                onChange={(e) => setFormData({ ...formData, qtd_parcelas: Number.parseInt(e.target.value) || 1 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    qtd_parcelas: Number.parseInt(e.target.value) || 1,
+                  })
+                }
               />
               <p className="text-xs text-muted-foreground">
-                Parcelas de {formatCurrency(valorTotal / formData.qtd_parcelas || 0)} cada
+                Parcelas de{" "}
+                {formatCurrency(valorTotal / formData.qtd_parcelas || 0)} cada
               </p>
             </div>
 
@@ -288,9 +362,28 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
               <Label>Observações</Label>
               <Textarea
                 value={formData.observacoes}
-                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, observacoes: e.target.value })
+                }
                 placeholder="Informações adicionais..."
                 rows={3}
+              />
+            </div>
+
+            {/* Documentos */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ImageUpload
+                label={
+                  tipo === "venda"
+                    ? "Guia de Transporte (GTA)"
+                    : "GTA (Opcional)"
+                }
+                // Não passamos initialUrl pois é criação nova
+                onFileChange={(file) => setGtaFile(file)}
+              />
+              <ImageUpload
+                label="Nota Fiscal / Recibo"
+                onFileChange={(file) => setNotaFile(file)}
               />
             </div>
 
@@ -302,7 +395,9 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
               </div>
               <div className="flex justify-between text-lg font-semibold">
                 <span>Valor Total:</span>
-                <span className="text-primary">{formatCurrency(valorTotal)}</span>
+                <span className="text-primary">
+                  {formatCurrency(valorTotal)}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -312,7 +407,12 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Grupos de Preço</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addPriceGroup}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addPriceGroup}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Adicionar Grupo
             </Button>
@@ -323,7 +423,12 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Grupo {index + 1}</span>
                   {priceGroups.length > 1 && (
-                    <Button type="button" variant="ghost" size="icon" onClick={() => removePriceGroup(group.id)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePriceGroup(group.id)}
+                    >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
@@ -336,7 +441,13 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                       type="number"
                       step="0.01"
                       value={group.valor_unitario}
-                      onChange={(e) => updatePriceGroup(group.id, "valor_unitario", e.target.value)}
+                      onChange={(e) =>
+                        updatePriceGroup(
+                          group.id,
+                          "valor_unitario",
+                          e.target.value
+                        )
+                      }
                       placeholder="0,00"
                     />
                   </div>
@@ -344,31 +455,42 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                     <Label className="text-xs">Descrição</Label>
                     <Input
                       value={group.descricao}
-                      onChange={(e) => updatePriceGroup(group.id, "descricao", e.target.value)}
+                      onChange={(e) =>
+                        updatePriceGroup(group.id, "descricao", e.target.value)
+                      }
                       placeholder="Ex: Bezerros desmamados"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs">Animais ({group.animais_ids.length} selecionados)</Label>
+                  <Label className="text-xs">
+                    Animais ({group.animais_ids.length} selecionados)
+                  </Label>
                   <ScrollArea className="h-[120px] rounded border p-2">
                     <div className="grid gap-1">
                       {/* Show selected animals first */}
                       {group.animais_ids.map((animalId) => {
-                        const animal = animais.find((a) => a.id === animalId)
-                        if (!animal) return null
+                        const animal = animais.find((a) => a.id === animalId);
+                        if (!animal) return null;
                         return (
                           <label
                             key={animal.id}
                             className="flex items-center gap-2 rounded p-1.5 cursor-pointer bg-primary/10"
                           >
-                            <Checkbox checked={true} onCheckedChange={() => toggleAnimalInGroup(group.id, animal.id)} />
+                            <Checkbox
+                              checked={true}
+                              onCheckedChange={() =>
+                                toggleAnimalInGroup(group.id, animal.id)
+                              }
+                            />
                             <span className="text-xs">
-                              {animal.numero_brinco || animal.nome || animal.id.slice(0, 8)}
+                              {animal.numero_brinco ||
+                                animal.nome ||
+                                animal.id.slice(0, 8)}
                             </span>
                           </label>
-                        )
+                        );
                       })}
                       {/* Show available animals */}
                       {availableAnimals.map((animal) => (
@@ -376,9 +498,16 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                           key={animal.id}
                           className="flex items-center gap-2 rounded p-1.5 cursor-pointer hover:bg-muted"
                         >
-                          <Checkbox checked={false} onCheckedChange={() => toggleAnimalInGroup(group.id, animal.id)} />
+                          <Checkbox
+                            checked={false}
+                            onCheckedChange={() =>
+                              toggleAnimalInGroup(group.id, animal.id)
+                            }
+                          />
                           <span className="text-xs">
-                            {animal.numero_brinco || animal.nome || animal.id.slice(0, 8)}
+                            {animal.numero_brinco ||
+                              animal.nome ||
+                              animal.id.slice(0, 8)}
                           </span>
                         </label>
                       ))}
@@ -389,7 +518,10 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
                 <div className="text-right text-sm text-muted-foreground">
                   Subtotal:{" "}
                   <span className="font-medium text-foreground">
-                    {formatCurrency(Number.parseFloat(group.valor_unitario || "0") * group.quantidade_animais)}
+                    {formatCurrency(
+                      Number.parseFloat(group.valor_unitario || "0") *
+                        group.quantidade_animais
+                    )}
                   </span>
                 </div>
               </div>
@@ -400,15 +532,23 @@ export function TransactionForm({ tipo, onSuccess, onCancel }: TransactionFormPr
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-3">
-        <Button type="button" variant="outline" onClick={onCancel || (() => router.back())}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel || (() => router.back())}
+        >
           <X className="mr-2 h-4 w-4" />
           Cancelar
         </Button>
         <Button type="submit" disabled={loading || totalAnimais === 0}>
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {loading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
           Registrar {tipo === "compra" ? "Compra" : "Venda"}
         </Button>
       </div>
     </form>
-  )
+  );
 }
