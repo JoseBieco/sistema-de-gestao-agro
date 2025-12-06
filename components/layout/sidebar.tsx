@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LayoutDashboard,
   Beef,
@@ -22,18 +22,19 @@ import {
   ClipboardList,
   ShoppingCart,
   Receipt,
-} from "lucide-react"
+  ArrowLeftRight,
+} from "lucide-react";
 
 interface NavItem {
-  title: string
-  href: string
-  icon: React.ElementType
-  badge?: number
+  title: string;
+  href: string;
+  icon: React.ElementType;
+  badge?: number;
 }
 
 interface NavGroup {
-  title: string
-  items: NavItem[]
+  title: string;
+  items: NavItem[];
 }
 
 const navigation: NavGroup[] = [
@@ -46,6 +47,7 @@ const navigation: NavGroup[] = [
     items: [
       { title: "Animais", href: "/animais", icon: Beef },
       { title: "Raças", href: "/racas", icon: ClipboardList },
+      { title: "Manejo", href: "/manejo", icon: ArrowLeftRight },
     ],
   },
   {
@@ -71,17 +73,17 @@ const navigation: NavGroup[] = [
       { title: "Configurações", href: "/configuracoes", icon: Settings },
     ],
   },
-]
+];
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 h-screen bg-sidebar text-sidebar-foreground transition-all duration-300 flex flex-col",
-        collapsed ? "w-[70px]" : "w-[260px]",
+        collapsed ? "w-[70px]" : "w-[260px]"
       )}
     >
       {/* Header */}
@@ -92,8 +94,12 @@ export function Sidebar() {
               <Beef className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold leading-tight">Gestão</span>
-              <span className="text-xs text-sidebar-foreground/70 leading-tight">Pecuária 360</span>
+              <span className="text-sm font-semibold leading-tight">
+                Gestão
+              </span>
+              <span className="text-xs text-sidebar-foreground/70 leading-tight">
+                Pecuária 360
+              </span>
             </div>
           </Link>
         )}
@@ -116,7 +122,7 @@ export function Sidebar() {
               )}
               <div className="space-y-1">
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href
+                  const isActive = pathname === item.href;
                   return (
                     <Link
                       key={item.href}
@@ -125,11 +131,16 @@ export function Sidebar() {
                         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                       )}
                       title={collapsed ? item.title : undefined}
                     >
-                      <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-sidebar-primary")} />
+                      <item.icon
+                        className={cn(
+                          "h-5 w-5 shrink-0",
+                          isActive && "text-sidebar-primary"
+                        )}
+                      />
                       {!collapsed && (
                         <>
                           <span className="flex-1">{item.title}</span>
@@ -141,7 +152,7 @@ export function Sidebar() {
                         </>
                       )}
                     </Link>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -168,5 +179,5 @@ export function Sidebar() {
         </Button>
       </div>
     </aside>
-  )
+  );
 }
