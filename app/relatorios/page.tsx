@@ -1,23 +1,57 @@
-import { AppShell } from "@/components/layout/app-shell"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, Construction } from "lucide-react"
+import { createClient } from "@/lib/supabase/server";
+import { AppShell } from "@/components/layout/app-shell";
+import { RelatoriosClient } from "@/components/reports/relatorios-client";
+import { CotacoesBIClient } from "@/components/reports/cotacoes-bi";
 
-export default function RelatoriosPage() {
+export default async function RelatoriosPage() {
+  const supabase = await createClient();
+
+  const currentYear = new Date().getFullYear();
+  const startOfYear = `${currentYear}-01-01`;
+  const endOfYear = `${currentYear}-12-31`;
+
+  const [
+    { data: animais },
+    { data: transacoes },
+    { data: vacinas },
+    { data: parcelas },
+    { data: cotacoes },
+  ] = await Promise.all([
+    supabase.from("animais").select("*, raca:racas(nome)"),
+    supabase
+      .from("transacoes")
+      .select("*, parceiro:parceiros(nome)")
+      .gte("data_negociacao", startOfYear)
+      .lte("data_negociacao", endOfYear),
+    supabase
+      .from("agenda_vacinas")
+      .select(
+        "*, animal:animais(numero_brinco, nome), tipo_vacina:tipos_vacina(nome)"
+      )
+      .gte("data_prevista", startOfYear)
+      .lte("data_prevista", endOfYear),
+    supabase
+      .from("parcelas")
+      .select("*, transacao:transacoes(tipo, parceiro:parceiros(nome))")
+      .gte("data_vencimento", startOfYear)
+      .lte("data_vencimento", endOfYear),
+    supabase
+      .from("cotacoes_historicas")
+      .select("*")
+      .order("data", { ascending: false }),
+  ]);
+
   return (
     <AppShell title="Relatórios">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Relatórios
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Construction className="h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground">Em Desenvolvimento</h3>
-          <p className="text-sm text-muted-foreground mt-1">Módulo de relatórios será implementado em breve</p>
-        </CardContent>
-      </Card>
+      <RelatoriosClient
+        animais={animais || []}
+        transacoes={transacoes || []}
+        vacinas={vacinas || []}
+        parcelas={parcelas || []}
+      />
+      <div className="mt-8">
+        <CotacoesBIClient cotacoes={cotacoes || []} />
+      </div>
     </AppShell>
-  )
+  );
 }

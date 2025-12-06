@@ -1,72 +1,125 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils/format"
-import { Receipt, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
-import type { Parcela, Transacao, Parceiro } from "@/lib/types/database"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils/format";
+import {
+  Receipt,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  FileImage,
+  Printer,
+} from "lucide-react";
+import type { Parcela, Transacao, Parceiro } from "@/lib/types/database";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { ReceiptDialog } from "@/components/financial/receipt-dialog";
+import { ImageViewDialog } from "@/components/ui/image-view-dialog";
 
 type ParcelaExtended = Parcela & {
   transacao?: Transacao & {
-    parceiro?: Parceiro
-  }
-}
+    parceiro?: Parceiro;
+  };
+};
 
 interface ParcelasPageClientProps {
-  initialParcelas: ParcelaExtended[]
+  initialParcelas: ParcelaExtended[];
 }
 
-export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps) {
-  const router = useRouter()
-  const supabase = createClient()
-  const [parcelas, setParcelas] = useState(initialParcelas)
-  const [activeTab, setActiveTab] = useState("pendentes")
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
-  const [selectedParcela, setSelectedParcela] = useState<ParcelaExtended | null>(null)
-  const [loading, setLoading] = useState(false)
+export function ParcelasPageClient({
+  initialParcelas,
+}: ParcelasPageClientProps) {
+  const router = useRouter();
+  const supabase = createClient();
+  const [parcelas, setParcelas] = useState(initialParcelas);
+  const [activeTab, setActiveTab] = useState("pendentes");
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedParcela, setSelectedParcela] =
+    useState<ParcelaExtended | null>(null);
+  const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState({
     data_pagamento: new Date().toISOString().split("T")[0],
     data_baixa_promissoria: "",
-  })
+  });
+  // Adicionar estado para imagem da promissória no modal de pagamento
+  const [fotoPromissoria, setFotoPromissoria] = useState<File | null>(null);
+
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [receiptParcela, setReceiptParcela] = useState<ParcelaExtended | null>(
+    null
+  );
+
+  // Estado para Visualizar Imagem
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+
+  // Função auxiliar
+  function openImageView(url: string) {
+    setSelectedImageUrl(url);
+    setImageViewerOpen(true);
+  }
 
   async function refreshParcelas() {
     const { data } = await supabase
       .from("parcelas")
-      .select(`
+      .select(
+        `
         *,
         transacao:transacoes(
           id,
           tipo,
           parceiro:parceiros(id, nome)
         )
-      `)
-      .order("data_vencimento", { ascending: true })
+      `
+      )
+      .order("data_vencimento", { ascending: true });
 
-    if (data) setParcelas(data)
-    router.refresh()
+    if (data) setParcelas(data);
+    router.refresh();
   }
 
   function openPaymentDialog(parcela: ParcelaExtended) {
-    setSelectedParcela(parcela)
+    setSelectedParcela(parcela);
     setPaymentData({
       data_pagamento: new Date().toISOString().split("T")[0],
       data_baixa_promissoria: "",
-    })
-    setPaymentDialogOpen(true)
+    });
+    setFotoPromissoria(null); // FIX: Carrega se já existir
+    setPaymentDialogOpen(true);
+  }
+
+  function openReceiptDialog(parcela: ParcelaExtended) {
+    setReceiptParcela(parcela);
+    setReceiptDialogOpen(true);
   }
 
   async function handlePayment() {
-    if (!selectedParcela) return
-    setLoading(true)
+    if (!selectedParcela) return;
+    setLoading(true);
 
     try {
       const { error } = await supabase
@@ -75,67 +128,79 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
           status: "pago",
           data_pagamento: paymentData.data_pagamento,
           data_baixa_promissoria: paymentData.data_baixa_promissoria || null,
+          foto_promissoria_frente_url: fotoPromissoria || null,
         })
-        .eq("id", selectedParcela.id)
+        .eq("id", selectedParcela.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       // Check if all parcels are paid to finalize transaction
       const { data: allParcelas } = await supabase
         .from("parcelas")
         .select("status")
-        .eq("transacao_id", selectedParcela.transacao_id)
+        .eq("transacao_id", selectedParcela.transacao_id);
 
       if (allParcelas?.every((p) => p.status === "pago")) {
-        await supabase.from("transacoes").update({ status: "finalizada" }).eq("id", selectedParcela.transacao_id)
+        await supabase
+          .from("transacoes")
+          .update({ status: "finalizada" })
+          .eq("id", selectedParcela.transacao_id);
       }
 
-      await refreshParcelas()
-      setPaymentDialogOpen(false)
+      await refreshParcelas();
+      setPaymentDialogOpen(false);
+
+      // Abrir recibo automaticamente após pagar
+      // const updatedParcela = { ...selectedParcela, status: 'pago' as const, data_pagamento: paymentData.data_pagamento }
+      // openReceiptDialog(updatedParcela)
     } catch (error) {
-      console.error("Erro ao registrar pagamento:", error)
+      console.error("Erro ao registrar pagamento:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = new Date().toISOString().split("T")[0];
   const processedParcelas = parcelas.map((p) => {
     if (p.status === "pendente" && p.data_vencimento < today) {
-      return { ...p, status: "atrasado" as const }
+      return { ...p, status: "atrasado" as const };
     }
-    return p
-  })
+    return p;
+  });
 
-  const aReceber = processedParcelas.filter((p) => p.transacao?.tipo === "venda" && p.status !== "pago")
-  const aPagar = processedParcelas.filter((p) => p.transacao?.tipo === "compra" && p.status !== "pago")
-  const pendentes = processedParcelas.filter((p) => p.status === "pendente")
-  const atrasadas = processedParcelas.filter((p) => p.status === "atrasado")
-  const pagas = processedParcelas.filter((p) => p.status === "pago")
+  const aReceber = processedParcelas.filter(
+    (p) => p.transacao?.tipo === "venda" && p.status !== "pago"
+  );
+  const aPagar = processedParcelas.filter(
+    (p) => p.transacao?.tipo === "compra" && p.status !== "pago"
+  );
+  const pendentes = processedParcelas.filter((p) => p.status === "pendente");
+  const atrasadas = processedParcelas.filter((p) => p.status === "atrasado");
+  const pagas = processedParcelas.filter((p) => p.status === "pago");
 
   const filteredParcelas = (() => {
     switch (activeTab) {
       case "pendentes":
-        return pendentes
+        return pendentes;
       case "atrasadas":
-        return atrasadas
+        return atrasadas;
       case "pagas":
-        return pagas
+        return pagas;
       case "receber":
-        return aReceber
+        return aReceber;
       case "pagar":
-        return aPagar
+        return aPagar;
       default:
-        return processedParcelas
+        return processedParcelas;
     }
-  })()
+  })();
 
   const stats = {
     totalReceber: aReceber.reduce((acc, p) => acc + p.valor, 0),
     totalPagar: aPagar.reduce((acc, p) => acc + p.valor, 0),
     atrasadas: atrasadas.length,
     pendentes: pendentes.length,
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -148,7 +213,9 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
             </div>
             <div>
               <p className="text-sm text-muted-foreground">A Receber</p>
-              <p className="text-xl font-bold text-emerald-600">{formatCurrency(stats.totalReceber)}</p>
+              <p className="text-xl font-bold text-emerald-600">
+                {formatCurrency(stats.totalReceber)}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -159,7 +226,9 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
             </div>
             <div>
               <p className="text-sm text-muted-foreground">A Pagar</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalPagar)}</p>
+              <p className="text-xl font-bold text-red-600">
+                {formatCurrency(stats.totalPagar)}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -198,9 +267,15 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex-wrap">
-              <TabsTrigger value="pendentes">Pendentes ({pendentes.length})</TabsTrigger>
-              <TabsTrigger value="atrasadas">Atrasadas ({atrasadas.length})</TabsTrigger>
-              <TabsTrigger value="receber">A Receber ({aReceber.length})</TabsTrigger>
+              <TabsTrigger value="pendentes">
+                Pendentes ({pendentes.length})
+              </TabsTrigger>
+              <TabsTrigger value="atrasadas">
+                Atrasadas ({atrasadas.length})
+              </TabsTrigger>
+              <TabsTrigger value="receber">
+                A Receber ({aReceber.length})
+              </TabsTrigger>
               <TabsTrigger value="pagar">A Pagar ({aPagar.length})</TabsTrigger>
               <TabsTrigger value="pagas">Pagas ({pagas.length})</TabsTrigger>
             </TabsList>
@@ -221,35 +296,89 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
                   {filteredParcelas.length > 0 ? (
                     filteredParcelas.map((p) => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.transacao?.parceiro?.nome || "-"}</TableCell>
+                        <TableCell className="font-medium">
+                          {p.transacao?.parceiro?.nome || "-"}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={p.transacao?.tipo === "venda" ? "default" : "secondary"}>
-                            {p.transacao?.tipo === "venda" ? "Receber" : "Pagar"}
+                          <Badge
+                            variant={
+                              p.transacao?.tipo === "venda"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {p.transacao?.tipo === "venda"
+                              ? "Receber"
+                              : "Pagar"}
                           </Badge>
                         </TableCell>
                         <TableCell>{p.numero_parcela}ª</TableCell>
                         <TableCell>{formatDate(p.data_vencimento)}</TableCell>
-                        <TableCell className={p.transacao?.tipo === "venda" ? "text-emerald-600" : "text-red-600"}>
+                        <TableCell
+                          className={
+                            p.transacao?.tipo === "venda"
+                              ? "text-emerald-600"
+                              : "text-red-600"
+                          }
+                        >
                           {formatCurrency(p.valor)}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(p.status)}>
-                            {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                            {p.status.charAt(0).toUpperCase() +
+                              p.status.slice(1)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {p.status !== "pago" && (
-                            <Button variant="outline" size="sm" onClick={() => openPaymentDialog(p)}>
-                              <CheckCircle className="mr-1 h-3 w-3" />
-                              Baixar
-                            </Button>
-                          )}
+                          <div className="flex gap-1">
+                            {p.status !== "pago" ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openPaymentDialog(p)}
+                              >
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Baixar
+                              </Button>
+                            ) : (
+                              <>
+                                {/* Botão 1: Gerar Recibo do Sistema */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openReceiptDialog(p)}
+                                  title="Gerar Recibo do Sistema"
+                                >
+                                  <Printer className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+
+                                {/* Botão 2: Ver Imagem Anexada (Só aparece se tiver foto) */}
+                                {p.foto_promissoria_frente_url && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      openImageView(
+                                        p.foto_promissoria_frente_url!
+                                      )
+                                    }
+                                    title="Ver Promissória Anexada"
+                                  >
+                                    <FileImage className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell
+                        colSpan={7}
+                        className="text-center text-muted-foreground py-8"
+                      >
                         Nenhuma parcela encontrada
                       </TableCell>
                     </TableRow>
@@ -271,15 +400,21 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
             <div className="rounded-lg bg-muted/50 p-3 space-y-1">
               <p className="text-sm">
                 <span className="text-muted-foreground">Parceiro:</span>{" "}
-                <span className="font-medium">{selectedParcela?.transacao?.parceiro?.nome}</span>
+                <span className="font-medium">
+                  {selectedParcela?.transacao?.parceiro?.nome}
+                </span>
               </p>
               <p className="text-sm">
                 <span className="text-muted-foreground">Parcela:</span>{" "}
-                <span className="font-medium">{selectedParcela?.numero_parcela}ª</span>
+                <span className="font-medium">
+                  {selectedParcela?.numero_parcela}ª
+                </span>
               </p>
               <p className="text-sm">
                 <span className="text-muted-foreground">Valor:</span>{" "}
-                <span className="font-medium">{formatCurrency(selectedParcela?.valor || 0)}</span>
+                <span className="font-medium">
+                  {formatCurrency(selectedParcela?.valor || 0)}
+                </span>
               </p>
             </div>
 
@@ -288,7 +423,12 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
               <Input
                 type="date"
                 value={paymentData.data_pagamento}
-                onChange={(e) => setPaymentData({ ...paymentData, data_pagamento: e.target.value })}
+                onChange={(e) =>
+                  setPaymentData({
+                    ...paymentData,
+                    data_pagamento: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -297,13 +437,31 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
               <Input
                 type="date"
                 value={paymentData.data_baixa_promissoria}
-                onChange={(e) => setPaymentData({ ...paymentData, data_baixa_promissoria: e.target.value })}
+                onChange={(e) =>
+                  setPaymentData({
+                    ...paymentData,
+                    data_baixa_promissoria: e.target.value,
+                  })
+                }
               />
-              <p className="text-xs text-muted-foreground">Data em que a promissória física foi devolvida/recolhida</p>
+              <p className="text-xs text-muted-foreground">
+                Data em que a promissória física foi devolvida/recolhida
+              </p>
+            </div>
+            {/* Campo de imagem */}
+            <div className="pt-2">
+              <ImageUpload
+                label="Foto da Promissória (Recibo)"
+                initialUrl={selectedParcela?.foto_promissoria_frente_url}
+                onFileChange={(file) => setFotoPromissoria(file)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setPaymentDialogOpen(false)}
+            >
               Cancelar
             </Button>
             <Button onClick={handlePayment} disabled={loading}>
@@ -313,6 +471,19 @@ export function ParcelasPageClient({ initialParcelas }: ParcelasPageClientProps)
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Componente de Recibo */}
+      <ReceiptDialog
+        open={receiptDialogOpen}
+        onOpenChange={setReceiptDialogOpen}
+        parcela={receiptParcela}
+      />
+
+      <ImageViewDialog
+        open={imageViewerOpen}
+        onOpenChange={setImageViewerOpen}
+        url={selectedImageUrl}
+        title="Promissória / Comprovante Anexado"
+      />
     </div>
-  )
+  );
 }
