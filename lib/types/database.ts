@@ -2,6 +2,27 @@
 // TIPOS DO BANCO DE DADOS
 // =============================================
 
+export interface Local {
+  id: string;
+  nome: string;
+  tipo: "pasto" | "piquete" | "curral" | "confinamento";
+  area_hectares: number;
+  capacidade_maxima: number;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HistoricoMovimentacao {
+  id: string;
+  animal_id: string;
+  local_origem_id?: string;
+  local_destino_id?: string;
+  data_movimentacao: string;
+  motivo?: string;
+  created_at: string;
+}
+
 export type Genero = "M" | "F";
 export type OrigemAnimal = "nascido" | "comprado";
 export type StatusAnimal = "ativo" | "vendido" | "morto" | "transferido";
@@ -79,6 +100,9 @@ export interface Animal {
   raca?: Raca;
   mae?: Animal;
   pai?: Animal;
+  // Local
+  local_id?: string;
+  local?: Local;
 }
 
 export interface Transacao {
