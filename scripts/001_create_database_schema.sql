@@ -187,3 +187,18 @@ CREATE POLICY "Allow all operations on animais_transacao" ON animais_transacao F
 CREATE POLICY "Allow all operations on agenda_vacinas" ON agenda_vacinas FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all operations on parcelas" ON parcelas FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all operations on historico_pesagem" ON historico_pesagem FOR ALL USING (true) WITH CHECK (true);
+
+
+-- VIEW para carregar os dados do filho e dos pais
+CREATE OR REPLACE VIEW animais_detalhes AS
+SELECT
+  a.*,
+  r.nome as raca_nome,
+  m.numero_brinco as mae_brinco,
+  m.nome as mae_nome,
+  p.numero_brinco as pai_brinco,
+  p.nome as pai_nome
+FROM animais a
+LEFT JOIN racas r ON a.raca_id = r.id
+LEFT JOIN animais m ON a.mae_id = m.id
+LEFT JOIN animais p ON a.pai_id = p.id;
