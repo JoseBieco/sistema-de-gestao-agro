@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, X } from "lucide-react";
 import type { Animal, Raca, Genero, OrigemAnimal } from "@/lib/types/database";
+import { differenceInMonths, parseISO } from "date-fns";
 
 interface AnimalFormProps {
   animal?: Animal;
@@ -58,8 +59,9 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
       supabase.from("racas").select("*").order("nome"),
       supabase
         .from("animais")
-        .select("id, numero_brinco, nome, genero")
-        .eq("status", "ativo"),
+        .select("id, numero_brinco, nome, genero, data_nascimento")
+        .neq("status", "morto") // Não listar animais mortos como pais
+        .neq("status", "vendido"), // Opcional: não listar vendidos
     ]);
 
     if (racasRes.data) setRacas(racasRes.data);
@@ -71,7 +73,6 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
     setLoading(true);
 
     try {
-      // Função auxiliar para limpar IDs inválidos/defaults
       const cleanId = (value: string) => {
         if (!value || value.startsWith("default_")) return null;
         return value;
@@ -112,8 +113,39 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
     }
   }
 
-  const femeas = animais.filter((a) => a.genero === "F" && a.id !== animal?.id);
-  const machos = animais.filter((a) => a.genero === "M" && a.id !== animal?.id);
+  // Lógica de Filtro Inteligente ---
+
+  // Função para verificar se um potencial pai/mãe tem idade compatível
+  const isIdadeCompativel = (candidato: Animal) => {
+    // Não pode ser ele mesmo
+    if (candidato.id === animal?.id) return false;
+
+    // Se o animal sendo criado tem data de nascimento, o pai/mãe deve ser mais velho
+    if (formData.data_nascimento && candidato.data_nascimento) {
+      return (
+        new Date(candidato.data_nascimento) < new Date(formData.data_nascimento)
+      );
+    }
+
+    // Se não tem data para comparar, assumimos idade mínima reprodutiva (ex: 12 meses)
+    if (candidato.data_nascimento) {
+      const idadeMeses = differenceInMonths(
+        new Date(),
+        parseISO(candidato.data_nascimento)
+      );
+      return idadeMeses >= 12; // Mínimo 12 meses para aparecer na lista
+    }
+
+    // Se não tem data de nascimento cadastrada, mostramos na lista (pode ser animal antigo comprado)
+    return true;
+  };
+
+  const femeas = animais.filter(
+    (a) => a.genero === "F" && isIdadeCompativel(a)
+  );
+  const machos = animais.filter(
+    (a) => a.genero === "M" && isIdadeCompativel(a)
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -257,13 +289,15 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a mãe (opcional)" />
+                  <SelectValue placeholder="Selecione a mãe (fêmeas reprodutoras)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default_mae_id">Não informado</SelectItem>
                   {femeas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.numero_brinco || a.nome || a.id.slice(0, 8)}
+                      {a.numero_brinco || a.nome}
+                      {a.data_nascimento &&
+                        ` (${new Date(a.data_nascimento).getFullYear()})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -279,13 +313,15 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o pai (opcional)" />
+                  <SelectValue placeholder="Selecione o pai (touros)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default_pai_id">Não informado</SelectItem>
                   {machos.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.numero_brinco || a.nome || a.id.slice(0, 8)}
+                      {a.numero_brinco || a.nome}
+                      {a.data_nascimento &&
+                        ` (${new Date(a.data_nascimento).getFullYear()})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -294,7 +330,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
 
             {/* Brucelose - Only for females */}
             {formData.genero === "F" && (
-              <div className="rounded-lg border p-4 space-y-4">
+              <div className="rounded-lg border p-4 space-y-4 bg-muted/20">
                 <div className="flex items-center justify-between">
                   <div>
                     <Label
