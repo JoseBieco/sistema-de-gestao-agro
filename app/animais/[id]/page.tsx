@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, calcularIdade, getStatusColor } from "@/lib/utils/format";
-import { Edit, ArrowLeft, Beef, Dna, Syringe } from "lucide-react";
+import { Edit, ArrowLeft, Beef, Syringe, Dna } from "lucide-react";
 import { WeightHistory } from "@/components/animals/weight-history";
+import { GenealogyTree } from "@/components/animals/genealogy-tree"; // Importar novo componente
 
 interface AnimalPageProps {
   params: Promise<{ id: string }>;
@@ -17,29 +18,124 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
-  // Busca os detalhes do animal usando a VIEW
-  const { data: animal, error } = await supabase
-    .from("animais_detalhes") // Usando a View criada
+  // Busca os detalhes do animal usando a VIEW (estrutura plana)
+  const { data: animalBase, error } = await supabase
+    .from("animais_detalhes")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error) {
-    console.error("Erro ao buscar animal:", error);
-  }
-
-  if (!animal) {
+  if (!animalBase) {
     notFound();
   }
 
-  // Busca histórico de peso (separado, pois a View não traz lista aninhada)
+  // Busca histórico de peso
   const { data: historicoPesagem } = await supabase
     .from("historico_pesagem")
     .select("*")
     .eq("animal_id", id)
     .order("data_pesagem", { ascending: false });
 
-  // Busca histórico de vacinas
+  // Busca Avós (Genealogia Profunda)
+  // Como a View já nos dá os IDs de pai e mãe, usamos eles para buscar os avós
+  let avos: {
+    maternos: {
+      mae: {
+        id: any;
+        numero_brinco: any;
+        nome: any;
+      } | null;
+      pai: {
+        id: any;
+        numero_brinco: any;
+        nome: any;
+      } | null;
+    };
+    paternos: {
+      mae: {
+        id: any;
+        numero_brinco: any;
+        nome: any;
+      } | null;
+      pai: {
+        id: any;
+        numero_brinco: any;
+        nome: any;
+      } | null;
+    };
+  } = {
+    maternos: { mae: null, pai: null },
+    paternos: { mae: null, pai: null },
+  };
+
+  const promises = [];
+
+  // Buscar avós maternos (se tiver mãe)
+  if (animalBase.mae_id) {
+    promises.push(
+      supabase
+        .from("animais")
+        .select("id, numero_brinco, nome, mae_id, pai_id") // Precisamos dos IDs dos avós
+        .eq("id", animalBase.mae_id)
+        .single()
+        .then(async ({ data: mae }) => {
+          if (mae) {
+            // Buscar detalhes dos avós maternos
+            if (mae.mae_id) {
+              const { data: avoMae } = await supabase
+                .from("animais")
+                .select("id, numero_brinco, nome")
+                .eq("id", mae.mae_id)
+                .single();
+              avos.maternos.mae = avoMae;
+            }
+            if (mae.pai_id) {
+              const { data: avoPai } = await supabase
+                .from("animais")
+                .select("id, numero_brinco, nome")
+                .eq("id", mae.pai_id)
+                .single();
+              avos.maternos.pai = avoPai;
+            }
+          }
+        })
+    );
+  }
+
+  // Buscar avós paternos (se tiver pai)
+  if (animalBase.pai_id) {
+    promises.push(
+      supabase
+        .from("animais")
+        .select("id, numero_brinco, nome, mae_id, pai_id")
+        .eq("id", animalBase.pai_id)
+        .single()
+        .then(async ({ data: pai }) => {
+          if (pai) {
+            if (pai.mae_id) {
+              const { data: avoMae } = await supabase
+                .from("animais")
+                .select("id, numero_brinco, nome")
+                .eq("id", pai.mae_id)
+                .single();
+              avos.paternos.mae = avoMae;
+            }
+            if (pai.pai_id) {
+              const { data: avoPai } = await supabase
+                .from("animais")
+                .select("id, numero_brinco, nome")
+                .eq("id", pai.pai_id)
+                .single();
+              avos.paternos.pai = avoPai;
+            }
+          }
+        })
+    );
+  }
+
+  await Promise.all(promises);
+
+  // 4. Busca histórico de vacinas
   const { data: vacinas } = await supabase
     .from("agenda_vacinas")
     .select(
@@ -65,17 +161,17 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
             </Link>
             <div>
               <h2 className="text-2xl font-bold">
-                {animal.numero_brinco || animal.nome || "Animal"}
+                {animalBase.numero_brinco || animalBase.nome || "Animal"}
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={getStatusColor(animal.status)}>
-                  {animal.status.charAt(0).toUpperCase() +
-                    animal.status.slice(1)}
+                <Badge className={getStatusColor(animalBase.status)}>
+                  {animalBase.status.charAt(0).toUpperCase() +
+                    animalBase.status.slice(1)}
                 </Badge>
                 <Badge
-                  variant={animal.genero === "M" ? "default" : "secondary"}
+                  variant={animalBase.genero === "M" ? "default" : "secondary"}
                 >
-                  {animal.genero === "M" ? "Macho" : "Fêmea"}
+                  {animalBase.genero === "M" ? "Macho" : "Fêmea"}
                 </Badge>
               </div>
             </div>
@@ -102,24 +198,25 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                 <div>
                   <dt className="text-sm text-muted-foreground">Brinco</dt>
                   <dd className="text-sm font-medium">
-                    {animal.numero_brinco || "-"}
+                    {animalBase.numero_brinco || "-"}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Nome</dt>
-                  <dd className="text-sm font-medium">{animal.nome || "-"}</dd>
+                  <dd className="text-sm font-medium">
+                    {animalBase.nome || "-"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Raça</dt>
-                  {/* Atualizado para usar o campo da View: raca_nome */}
                   <dd className="text-sm font-medium">
-                    {animal.raca_nome || "-"}
+                    {animalBase.raca_nome || "-"}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Origem</dt>
                   <dd className="text-sm font-medium capitalize">
-                    {animal.origem}
+                    {animalBase.origem}
                   </dd>
                 </div>
                 <div>
@@ -127,16 +224,16 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                     Data de Nascimento
                   </dt>
                   <dd className="text-sm font-medium">
-                    {animal.data_nascimento
-                      ? formatDate(animal.data_nascimento)
+                    {animalBase.data_nascimento
+                      ? formatDate(animalBase.data_nascimento)
                       : "-"}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Idade</dt>
                   <dd className="text-sm font-medium">
-                    {animal.data_nascimento
-                      ? calcularIdade(animal.data_nascimento)
+                    {animalBase.data_nascimento
+                      ? calcularIdade(animalBase.data_nascimento)
                       : "-"}
                   </dd>
                 </div>
@@ -145,22 +242,22 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                     Peso ao Nascer
                   </dt>
                   <dd className="text-sm font-medium">
-                    {animal.peso_nascimento
-                      ? `${animal.peso_nascimento} kg`
+                    {animalBase.peso_nascimento
+                      ? `${animalBase.peso_nascimento} kg`
                       : "-"}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Peso Atual</dt>
                   <dd className="text-sm font-medium">
-                    {animal.peso_atual ? `${animal.peso_atual} kg` : "-"}
+                    {animalBase.peso_atual
+                      ? `${animalBase.peso_atual} kg`
+                      : "-"}
                   </dd>
                 </div>
               </dl>
             </CardContent>
           </Card>
-
-          {/* Genealogia */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -173,10 +270,10 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Mãe</p>
-                  {animal.mae_id ? (
+                  {animalBase.mae_id ? (
                     <span className="text-sm font-medium">
-                      {animal.mae_brinco ||
-                        animal.mae_nome ||
+                      {animalBase.mae_brinco ||
+                        animalBase.mae_nome ||
                         "Sem identificação"}
                     </span>
                   ) : (
@@ -186,8 +283,8 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                   )}
                 </div>
 
-                {animal.mae_id && (
-                  <Link href={`/animais/${animal.mae_id}`}>
+                {animalBase.mae_id && (
+                  <Link href={`/animais/${animalBase.mae_id}`}>
                     <Button variant="outline" size="sm" className="h-7 text-xs">
                       Acessar detalhes
                     </Button>
@@ -199,10 +296,10 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Pai</p>
-                  {animal.pai_id ? (
+                  {animalBase.pai_id ? (
                     <span className="text-sm font-medium">
-                      {animal.pai_brinco ||
-                        animal.pai_nome ||
+                      {animalBase.pai_brinco ||
+                        animalBase.pai_nome ||
                         "Sem identificação"}
                     </span>
                   ) : (
@@ -212,8 +309,8 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                   )}
                 </div>
 
-                {animal.pai_id && (
-                  <Link href={`/animais/${animal.pai_id}`}>
+                {animalBase.pai_id && (
+                  <Link href={`/animais/${animalBase.pai_id}`}>
                     <Button variant="outline" size="sm" className="h-7 text-xs">
                       Acessar detalhes
                     </Button>
@@ -222,7 +319,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
               </div>
 
               {/* BRUCELOSE (Apenas Fêmeas) */}
-              {animal.genero === "F" && (
+              {animalBase.genero === "F" && (
                 <div className="rounded-lg border p-3">
                   <div className="flex items-center justify-between">
                     <div>
@@ -231,19 +328,21 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                       </p>
                       <Badge
                         variant={
-                          animal.vacina_brucelose ? "default" : "secondary"
+                          animalBase.vacina_brucelose ? "default" : "secondary"
                         }
                       >
-                        {animal.vacina_brucelose ? "Vacinada" : "Não vacinada"}
+                        {animalBase.vacina_brucelose
+                          ? "Vacinada"
+                          : "Não vacinada"}
                       </Badge>
                     </div>
-                    {animal.data_brucelose && (
+                    {animalBase.data_brucelose && (
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">
                           Data da vacina
                         </p>
                         <p className="text-sm font-medium">
-                          {formatDate(animal.data_brucelose)}
+                          {formatDate(animalBase.data_brucelose)}
                         </p>
                       </div>
                     )}
@@ -253,16 +352,22 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
             </CardContent>
           </Card>
 
+          {/* Genealogia Visual */}
+          <div className="lg:col-span-3">
+            {/* // @ts-expect-error Ajustar as tipagens depois */}
+            <GenealogyTree animal={animalBase} avos={avos} />
+          </div>
+
           {/* Histórico de Peso */}
           <div className="lg:col-span-3">
             <WeightHistory
-              animalId={animal.id}
+              animalId={animalBase.id}
               history={historicoPesagem || []}
-              currentWeight={animal.peso_atual}
+              currentWeight={animalBase.peso_atual}
             />
           </div>
 
-          {/* Histórico de Vacinas */}
+          {/* Vaccine History */}
           <Card className="lg:col-span-3">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
