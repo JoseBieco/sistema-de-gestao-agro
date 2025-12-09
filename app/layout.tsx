@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   title: "Gestão Pecuária 360",
   description:
     "Sistema completo de gestão agropecuária - Controle de rebanho, sanitário e financeiro",
-  generator: "v0.app",
   keywords: [
     "pecuária",
     "gestão",
@@ -26,15 +25,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        // url: "/icon-light-32x32.png",
+        url: "/icon1.png",
         media: "(prefers-color-scheme: light)",
       },
+      // {
+      //   url: "/icon-dark-32x32.png",
+      //   media: "(prefers-color-scheme: dark)",
+      // },
       {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
+        url: "/icon0.svg",
         type: "image/svg+xml",
       },
     ],
