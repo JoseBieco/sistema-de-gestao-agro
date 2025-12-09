@@ -271,3 +271,29 @@ export interface TransacaoFormData {
     animais_ids?: string[];
   }[];
 }
+
+export type StatusReprodutivo =
+  | "vazia"
+  | "prenha"
+  | "lactacao"
+  | "aguardando_diagnostico";
+
+export interface CicloReprodutivo {
+  id: string;
+  animal_id: string;
+  data_ultimo_parto?: string;
+  data_ultimo_cio?: string;
+  data_cobertura?: string;
+  tipo_cobertura: "monta_natural" | "inseminacao";
+  touro_id?: string;
+  data_prevista_parto?: string;
+  data_prevista_cio?: string;
+  data_diagnostico_gestacao?: string;
+  status: StatusReprodutivo;
+  observacoes?: string;
+  ativo: boolean;
+  created_at: string;
+  // Join fields
+  animal?: Animal;
+  touro?: Animal;
+}
