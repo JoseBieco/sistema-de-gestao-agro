@@ -23,6 +23,7 @@ import {
   ShoppingCart,
   Receipt,
   ArrowLeftRight,
+  Baby,
 } from "lucide-react";
 
 interface NavItem {
@@ -48,6 +49,7 @@ const navigation: NavGroup[] = [
       { title: "Animais", href: "/animais", icon: Beef },
       { title: "Raças", href: "/racas", icon: ClipboardList },
       { title: "Manejo", href: "/manejo", icon: ArrowLeftRight },
+      { title: "Reprodução", href: "/reproducao", icon: Baby },
     ],
   },
   {
