@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, ArrowRight } from "lucide-react";
 import type { Animal, Local } from "@/lib/types/database";
+import { toast } from "sonner";
 
 interface MoveAnimalsDialogProps {
   open: boolean;
@@ -116,7 +117,9 @@ export function MoveAnimalsDialog({
       onOpenChange(false);
       setSelectedAnimals([]);
       setDestinationId("");
+      toast.success("Sucesso ao movimentar os animais.");
     } catch (error) {
+      toast.error("Erro na movimentação: " + error);
       console.error("Erro na movimentação:", error);
     } finally {
       setLoading(false);

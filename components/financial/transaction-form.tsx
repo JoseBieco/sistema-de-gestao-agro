@@ -29,6 +29,7 @@ import type {
 } from "@/lib/types/database";
 import { ImageUpload } from "../ui/image-upload";
 import { uploadFile } from "@/lib/utils/upload";
+import { toast } from "sonner";
 
 interface PriceGroup {
   id: string;
@@ -263,7 +264,9 @@ export function TransactionForm({
       onSuccess?.();
       router.push(tipo === "compra" ? "/compras" : "/vendas");
       router.refresh();
+      toast.success("Sucesso ao salvar a transação.");
     } catch (error) {
+      toast.success("Erro ao salvar a transação: " + error);
       console.error("Erro ao salvar transação:", error);
     } finally {
       setLoading(false);

@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -9,30 +9,38 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
-import type { AgendaVacina, TipoVacina } from "@/lib/types/database"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import type { AgendaVacina, TipoVacina } from "@/lib/types/database";
+import { toast } from "sonner";
 
 interface ApplyPendingDialogProps {
-  vaccine: (AgendaVacina & { tipo_vacina?: TipoVacina }) | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  vaccine: (AgendaVacina & { tipo_vacina?: TipoVacina }) | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
-export function ApplyPendingDialog({ vaccine, open, onOpenChange, onSuccess }: ApplyPendingDialogProps) {
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [dataAplicacao, setDataAplicacao] = useState(new Date().toISOString().split("T")[0])
-  const [observacoes, setObservacoes] = useState("")
+export function ApplyPendingDialog({
+  vaccine,
+  open,
+  onOpenChange,
+  onSuccess,
+}: ApplyPendingDialogProps) {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [dataAplicacao, setDataAplicacao] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [observacoes, setObservacoes] = useState("");
 
   async function handleSubmit() {
-    if (!vaccine) return
-    setLoading(true)
+    if (!vaccine) return;
+    setLoading(true);
 
     try {
       // Update current vaccine to applied
@@ -43,34 +51,38 @@ export function ApplyPendingDialog({ vaccine, open, onOpenChange, onSuccess }: A
           status: "aplicada",
           observacoes: observacoes || vaccine.observacoes,
         })
-        .eq("id", vaccine.id)
+        .eq("id", vaccine.id);
 
-      if (updateError) throw updateError
+      if (updateError) throw updateError;
 
       // If there are more doses needed, create next one
-      const tipoVacina = vaccine.tipo_vacina
+      const tipoVacina = vaccine.tipo_vacina;
       if (tipoVacina && tipoVacina.doses_por_ano > vaccine.dose_numero) {
-        const nextDate = new Date(dataAplicacao)
-        nextDate.setDate(nextDate.getDate() + tipoVacina.dias_entre_doses)
+        const nextDate = new Date(dataAplicacao);
+        nextDate.setDate(nextDate.getDate() + tipoVacina.dias_entre_doses);
 
-        const { error: nextError } = await supabase.from("agenda_vacinas").insert({
-          animal_id: vaccine.animal_id,
-          tipo_vacina_id: vaccine.tipo_vacina_id,
-          data_prevista: nextDate.toISOString().split("T")[0],
-          status: "pendente",
-          dose_numero: vaccine.dose_numero + 1,
-          vacina_pai_id: vaccine.id,
-        })
+        const { error: nextError } = await supabase
+          .from("agenda_vacinas")
+          .insert({
+            animal_id: vaccine.animal_id,
+            tipo_vacina_id: vaccine.tipo_vacina_id,
+            data_prevista: nextDate.toISOString().split("T")[0],
+            status: "pendente",
+            dose_numero: vaccine.dose_numero + 1,
+            vacina_pai_id: vaccine.id,
+          });
 
-        if (nextError) throw nextError
+        if (nextError) throw nextError;
       }
 
-      onSuccess()
-      onOpenChange(false)
+      onSuccess();
+      onOpenChange(false);
+      toast.success("Sucesso ao aplicar a vacina.");
     } catch (error) {
-      console.error("Erro ao aplicar vacina:", error)
+      toast.error("Erro ao aplicar vacina: " + error);
+      console.error("Erro ao aplicar vacina:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -87,7 +99,11 @@ export function ApplyPendingDialog({ vaccine, open, onOpenChange, onSuccess }: A
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Data da Aplicação</Label>
-            <Input type="date" value={dataAplicacao} onChange={(e) => setDataAplicacao(e.target.value)} />
+            <Input
+              type="date"
+              value={dataAplicacao}
+              onChange={(e) => setDataAplicacao(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>Observações</Label>
@@ -110,5 +126,5 @@ export function ApplyPendingDialog({ vaccine, open, onOpenChange, onSuccess }: A
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

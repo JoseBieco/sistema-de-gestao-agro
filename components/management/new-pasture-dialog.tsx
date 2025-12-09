@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface NewPastureDialogProps {
   open: boolean;
@@ -63,7 +64,9 @@ export function NewPastureDialog({
         area_hectares: "",
         capacidade_maxima: "",
       });
+      toast.success("Sucesso ao criar novo local.");
     } catch (error) {
+      toast.error("Erro ao criar local: " + error);
       console.error("Erro ao criar local:", error);
     } finally {
       setLoading(false);

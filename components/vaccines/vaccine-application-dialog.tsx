@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import type { Animal, TipoVacina } from "@/lib/types/database";
+import { toast } from "sonner";
 
 interface VaccineApplicationDialogProps {
   open: boolean;
@@ -138,7 +139,9 @@ export function VaccineApplicationDialog({
         data_aplicacao: new Date().toISOString().split("T")[0],
         observacoes: "",
       });
+      toast.success("Sucesso ao adicionar a vacina.");
     } catch (error) {
+      toast.error("Erro ao registrar vacinas:" + error);
       console.error("Erro ao registrar vacinas:", error);
     } finally {
       setLoading(false);

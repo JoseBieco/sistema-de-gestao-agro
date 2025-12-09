@@ -1,31 +1,45 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Edit, Trash2, Loader2, Syringe } from "lucide-react"
-import type { TipoVacina } from "@/lib/types/database"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Plus, Edit, Trash2, Loader2, Syringe } from "lucide-react";
+import type { TipoVacina } from "@/lib/types/database";
+import { toast } from "sonner";
 
 interface VacinasPageClientProps {
-  initialTipos: TipoVacina[]
+  initialTipos: TipoVacina[];
 }
 
 export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
-  const router = useRouter()
-  const supabase = createClient()
-  const [tipos, setTipos] = useState(initialTipos)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [editingTipo, setEditingTipo] = useState<TipoVacina | null>(null)
+  const router = useRouter();
+  const supabase = createClient();
+  const [tipos, setTipos] = useState(initialTipos);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [editingTipo, setEditingTipo] = useState<TipoVacina | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
@@ -33,11 +47,11 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
     dias_entre_doses: 365,
     obrigatoria: false,
     apenas_femeas: false,
-  })
+  });
 
   function openDialog(tipo?: TipoVacina) {
     if (tipo) {
-      setEditingTipo(tipo)
+      setEditingTipo(tipo);
       setFormData({
         nome: tipo.nome,
         descricao: tipo.descricao || "",
@@ -45,9 +59,9 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
         dias_entre_doses: tipo.dias_entre_doses,
         obrigatoria: tipo.obrigatoria,
         apenas_femeas: tipo.apenas_femeas,
-      })
+      });
     } else {
-      setEditingTipo(null)
+      setEditingTipo(null);
       setFormData({
         nome: "",
         descricao: "",
@@ -55,46 +69,57 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
         dias_entre_doses: 365,
         obrigatoria: false,
         apenas_femeas: false,
-      })
+      });
     }
-    setDialogOpen(true)
+    setDialogOpen(true);
   }
 
   async function handleSubmit() {
-    if (!formData.nome.trim()) return
-    setLoading(true)
+    if (!formData.nome.trim()) return;
+    setLoading(true);
 
     try {
       if (editingTipo) {
-        const { error } = await supabase.from("tipos_vacina").update(formData).eq("id", editingTipo.id)
-        if (error) throw error
+        const { error } = await supabase
+          .from("tipos_vacina")
+          .update(formData)
+          .eq("id", editingTipo.id);
+        if (error) throw error;
       } else {
-        const { error } = await supabase.from("tipos_vacina").insert(formData)
-        if (error) throw error
+        const { error } = await supabase.from("tipos_vacina").insert(formData);
+        if (error) throw error;
       }
 
-      const { data } = await supabase.from("tipos_vacina").select("*").order("nome")
-      if (data) setTipos(data)
-      setDialogOpen(false)
-      router.refresh()
+      const { data } = await supabase
+        .from("tipos_vacina")
+        .select("*")
+        .order("nome");
+      if (data) setTipos(data);
+      setDialogOpen(false);
+      router.refresh();
+      toast.success("Sucesso ao salvar novo tipo de vacina.");
     } catch (error) {
-      console.error("Erro ao salvar tipo de vacina:", error)
+      toast.error("Erro ao salvar tipo de vacina: " + error);
+      console.error("Erro ao salvar tipo de vacina:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return
+    if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return;
 
     try {
-      const { error } = await supabase.from("tipos_vacina").delete().eq("id", id)
-      if (error) throw error
+      const { error } = await supabase
+        .from("tipos_vacina")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
 
-      setTipos(tipos.filter((t) => t.id !== id))
-      router.refresh()
+      setTipos(tipos.filter((t) => t.id !== id));
+      router.refresh();
     } catch (error) {
-      console.error("Erro ao excluir tipo de vacina:", error)
+      console.error("Erro ao excluir tipo de vacina:", error);
     }
   }
 
@@ -129,7 +154,11 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
                     <TableCell>
                       <div>
                         <p className="font-medium">{tipo.nome}</p>
-                        {tipo.descricao && <p className="text-xs text-muted-foreground">{tipo.descricao}</p>}
+                        {tipo.descricao && (
+                          <p className="text-xs text-muted-foreground">
+                            {tipo.descricao}
+                          </p>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{tipo.doses_por_ano}x</TableCell>
@@ -150,10 +179,18 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openDialog(tipo)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openDialog(tipo)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(tipo.id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(tipo.id)}
+                        >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
@@ -162,7 +199,10 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground py-8"
+                  >
                     Nenhum tipo de vacina cadastrado
                   </TableCell>
                 </TableRow>
@@ -175,7 +215,9 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingTipo ? "Editar Vacina" : "Nova Vacina"}</DialogTitle>
+            <DialogTitle>
+              {editingTipo ? "Editar Vacina" : "Nova Vacina"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -183,7 +225,9 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
               <Input
                 id="nome"
                 value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
                 placeholder="Ex: Febre Aftosa"
               />
             </div>
@@ -192,7 +236,9 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
               <Textarea
                 id="descricao"
                 value={formData.descricao}
-                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, descricao: e.target.value })
+                }
                 placeholder="Descrição da vacina (opcional)"
               />
             </div>
@@ -204,7 +250,12 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
                   type="number"
                   min={1}
                   value={formData.doses_por_ano}
-                  onChange={(e) => setFormData({ ...formData, doses_por_ano: Number.parseInt(e.target.value) || 1 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      doses_por_ano: Number.parseInt(e.target.value) || 1,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -215,7 +266,10 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
                   min={1}
                   value={formData.dias_entre_doses}
                   onChange={(e) =>
-                    setFormData({ ...formData, dias_entre_doses: Number.parseInt(e.target.value) || 365 })
+                    setFormData({
+                      ...formData,
+                      dias_entre_doses: Number.parseInt(e.target.value) || 365,
+                    })
                   }
                 />
               </div>
@@ -223,12 +277,16 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <Label htmlFor="obrigatoria">Vacina Obrigatória</Label>
-                <p className="text-xs text-muted-foreground">Exigida pela legislação</p>
+                <p className="text-xs text-muted-foreground">
+                  Exigida pela legislação
+                </p>
               </div>
               <Switch
                 id="obrigatoria"
                 checked={formData.obrigatoria}
-                onCheckedChange={(checked) => setFormData({ ...formData, obrigatoria: checked })}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, obrigatoria: checked })
+                }
               />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
@@ -239,7 +297,9 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
               <Switch
                 id="apenas_femeas"
                 checked={formData.apenas_femeas}
-                onCheckedChange={(checked) => setFormData({ ...formData, apenas_femeas: checked })}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, apenas_femeas: checked })
+                }
               />
             </div>
           </div>
@@ -247,7 +307,10 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={loading || !formData.nome.trim()}>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || !formData.nome.trim()}
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingTipo ? "Atualizar" : "Cadastrar"}
             </Button>
@@ -255,5 +318,5 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

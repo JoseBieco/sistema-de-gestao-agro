@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, X } from "lucide-react";
 import type { Animal, Raca, Genero, OrigemAnimal } from "@/lib/types/database";
 import { differenceInMonths, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 interface AnimalFormProps {
   animal?: Animal;
@@ -104,10 +105,12 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
       }
 
       onSuccess?.();
+      toast.success("Animal salvo com sucesso!");
       router.push("/animais");
       router.refresh();
     } catch (error) {
       console.error("Erro ao salvar animal:", error);
+      toast.error("Erro ao salvar animal:" + error);
     } finally {
       setLoading(false);
     }
