@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Loader2, Beef } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -66,7 +67,7 @@ export default function LoginPage() {
               <Input id="password" name="password" type="password" required />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
             <Button className="w-full" type="submit" disabled={loading}>
               {loading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -74,6 +75,14 @@ export default function LoginPage() {
                 "Entrar"
               )}
             </Button>
+
+            {/* Adicione este bloco */}
+            <div className="text-center text-sm text-muted-foreground">
+              Não tem uma conta?{" "}
+              <Link href="/register" className="text-primary hover:underline">
+                Cadastre-se
+              </Link>
+            </div>
           </CardFooter>
         </form>
       </Card>
