@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/format";
-import { Loader2, Save, X, Plus, Trash2 } from "lucide-react";
+import { Loader2, Save, X, Plus, Trash2, Search } from "lucide-react";
 import type {
   Parceiro,
   Animal,
@@ -73,6 +73,9 @@ export function TransactionForm({
       animais_ids: [],
     },
   ]);
+
+  // Estado para armazenar o termo de busca de cada grupo
+  const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadData();
@@ -466,20 +469,51 @@ export function TransactionForm({
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">
-                    Animais ({group.animais_ids.length} selecionados)
-                  </Label>
-                  <ScrollArea className="h-[120px] rounded border p-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">
+                      Animais ({group.animais_ids.length} selecionados)
+                    </Label>
+                  </div>
+
+                  {/* Campo de Busca */}
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por brinco ou nome..."
+                      value={searchTerms[group.id] || ""}
+                      onChange={(e) =>
+                        setSearchTerms((prev) => ({
+                          ...prev,
+                          [group.id]: e.target.value,
+                        }))
+                      }
+                      className="pl-8 h-9 text-sm"
+                    />
+                  </div>
+
+                  <ScrollArea className="h-[150px] rounded border p-2">
                     <div className="grid gap-1">
-                      {/* Show selected animals first */}
+                      {/* Animais Selecionados (Filtrados) */}
                       {group.animais_ids.map((animalId) => {
                         const animal = animais.find((a) => a.id === animalId);
                         if (!animal) return null;
+
+                        // Lógica de filtro
+                        const term = (
+                          searchTerms[group.id] || ""
+                        ).toLowerCase();
+                        const matches =
+                          !term ||
+                          animal.numero_brinco?.toLowerCase().includes(term) ||
+                          animal.nome?.toLowerCase().includes(term);
+
+                        if (!matches) return null;
+
                         return (
                           <label
                             key={animal.id}
-                            className="flex items-center gap-2 rounded p-1.5 cursor-pointer bg-primary/10"
+                            className="flex items-center gap-2 rounded p-1.5 cursor-pointer bg-primary/10 hover:bg-primary/20 transition-colors"
                           >
                             <Checkbox
                               checked={true}
@@ -487,33 +521,57 @@ export function TransactionForm({
                                 toggleAnimalInGroup(group.id, animal.id)
                               }
                             />
-                            <span className="text-xs">
-                              {animal.numero_brinco ||
-                                animal.nome ||
-                                animal.id.slice(0, 8)}
+                            <span className="text-xs font-medium">
+                              {animal.numero_brinco || animal.nome || "Sem ID"}
+                              {animal.nome && animal.numero_brinco
+                                ? ` - ${animal.nome}`
+                                : ""}
                             </span>
                           </label>
                         );
                       })}
-                      {/* Show available animals */}
-                      {availableAnimals.map((animal) => (
-                        <label
-                          key={animal.id}
-                          className="flex items-center gap-2 rounded p-1.5 cursor-pointer hover:bg-muted"
-                        >
-                          <Checkbox
-                            checked={false}
-                            onCheckedChange={() =>
-                              toggleAnimalInGroup(group.id, animal.id)
-                            }
-                          />
-                          <span className="text-xs">
-                            {animal.numero_brinco ||
-                              animal.nome ||
-                              animal.id.slice(0, 8)}
-                          </span>
-                        </label>
-                      ))}
+
+                      {/* Animais Disponíveis (Filtrados) */}
+                      {availableAnimals
+                        .filter((animal) => {
+                          const term = (
+                            searchTerms[group.id] || ""
+                          ).toLowerCase();
+                          return (
+                            !term ||
+                            animal.numero_brinco
+                              ?.toLowerCase()
+                              .includes(term) ||
+                            animal.nome?.toLowerCase().includes(term)
+                          );
+                        })
+                        .map((animal) => (
+                          <label
+                            key={animal.id}
+                            className="flex items-center gap-2 rounded p-1.5 cursor-pointer hover:bg-muted transition-colors"
+                          >
+                            <Checkbox
+                              checked={false}
+                              onCheckedChange={() =>
+                                toggleAnimalInGroup(group.id, animal.id)
+                              }
+                            />
+                            <span className="text-xs">
+                              {animal.numero_brinco || animal.nome || "Sem ID"}
+                              {animal.nome && animal.numero_brinco
+                                ? ` - ${animal.nome}`
+                                : ""}
+                            </span>
+                          </label>
+                        ))}
+
+                      {/* Mensagem se não encontrar nada */}
+                      {availableAnimals.length === 0 &&
+                        group.animais_ids.length === 0 && (
+                          <p className="text-xs text-center text-muted-foreground py-2">
+                            Nenhum animal disponível.
+                          </p>
+                        )}
                     </div>
                   </ScrollArea>
                 </div>
