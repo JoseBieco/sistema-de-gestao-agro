@@ -11,7 +11,7 @@ import { WeightHistory } from "@/components/animals/weight-history";
 import {
   FamilyMember,
   GenealogyTree,
-} from "@/components/animals/genealogy-tree"; // Importar novo componente
+} from "@/components/animals/genealogy-tree";
 
 interface AnimalPageProps {
   params: Promise<{ id: string }>;
@@ -188,7 +188,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
       }
     : null;
 
-  // 4. Busca histórico de vacinas
+  // Busca histórico de vacinas
   const { data: vacinas } = await supabase
     .from("agenda_vacinas")
     .select(
@@ -404,6 +404,19 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
               )}
             </CardContent>
           </Card>
+
+          {animalData.observacoes && (
+            <Card className="lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="text-base">Observações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {animalData.observacoes}
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Genealogia Visual */}
           <div className="lg:col-span-3">
