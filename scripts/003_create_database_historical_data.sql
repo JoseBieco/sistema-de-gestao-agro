@@ -1,6 +1,6 @@
 -- Tabela para armazenar séries históricas de preços
 CREATE TABLE IF NOT EXISTS cotacoes_historicas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   data DATE NOT NULL,
   valor DECIMAL(10, 2) NOT NULL,
   tipo VARCHAR(50) NOT NULL, -- Ex: 'boi_gordo', 'bezerro', 'vaca', 'milho'
