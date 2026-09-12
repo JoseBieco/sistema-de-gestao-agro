@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { formatDate, calcularIdade, getStatusColor } from "@/lib/utils/format";
 import { Edit, ArrowLeft, Beef, Syringe, Dna } from "lucide-react";
 import { WeightHistory } from "@/components/animals/weight-history";
-import {
-  FamilyMember,
-  GenealogyTree,
-} from "@/components/animals/genealogy-tree";
+import { FamilyMember, GenealogyTree } from "@/components/animals/genealogy-tree";
+import { getAnimalDetailed } from "../actions";
 
 interface AnimalPageProps {
   params: Promise<{ id: string }>;
@@ -19,163 +16,41 @@ interface AnimalPageProps {
 
 export default async function AnimalPage({ params }: AnimalPageProps) {
   const { id } = await params;
-  const supabase = await createClient();
-
+  
   // Busca os detalhes do animal
-  const { data: animalData, error } = await supabase
-    .from("animais")
-    .select(
-      `
-      *,
-      mae:mae_id ( id, numero_brinco, nome ),
-      pai:pai_id ( id, numero_brinco, nome ),
-      filhos_como_mae:animais!mae_id ( id, numero_brinco, nome ),
-      filhos_como_pai:animais!pai_id ( id, numero_brinco, nome )
-    `
-    )
-    .eq("id", id)
-    .single();
+  const animalData = await getAnimalDetailed(id);
 
-  if (error || !animalData) {
-    console.error("Erro ao buscar animal:", error);
+  if (!animalData) {
+    console.error("Erro ao buscar animal:", id);
     notFound();
   }
 
-  // Busca histórico de peso
-  const { data: historicoPesagem } = await supabase
-    .from("historico_pesagem")
-    .select("*")
-    .eq("animal_id", id)
-    .order("data_pesagem", { ascending: false });
+  const historicoPesagem = animalData.historico_pesagem;
 
-  // @@@@@@@@@@ Os avós será modificado futuramente
-  // Busca Avós (Genealogia Profunda)
-  // Como a View já nos dá os IDs de pai e mãe, usamos eles para buscar os avós
-  // let avos: {
-  //   maternos: {
-  //     mae: {
-  //       id: any;
-  //       numero_brinco: any;
-  //       nome: any;
-  //     } | null;
-  //     pai: {
-  //       id: any;
-  //       numero_brinco: any;
-  //       nome: any;
-  //     } | null;
-  //   };
-  //   paternos: {
-  //     mae: {
-  //       id: any;
-  //       numero_brinco: any;
-  //       nome: any;
-  //     } | null;
-  //     pai: {
-  //       id: any;
-  //       numero_brinco: any;
-  //       nome: any;
-  //     } | null;
-  //   };
-  // } = {
-  //   maternos: { mae: null, pai: null },
-  //   paternos: { mae: null, pai: null },
-  // };
-
-  // const promises = [];
-
-  // // Buscar avós maternos (se tiver mãe)
-  // if (animalBase.mae_id) {
-  //   promises.push(
-  //     supabase
-  //       .from("animais")
-  //       .select("id, numero_brinco, nome, mae_id, pai_id") // Precisamos dos IDs dos avós
-  //       .eq("id", animalBase.mae_id)
-  //       .single()
-  //       .then(async ({ data: mae }) => {
-  //         if (mae) {
-  //           // Buscar detalhes dos avós maternos
-  //           if (mae.mae_id) {
-  //             const { data: avoMae } = await supabase
-  //               .from("animais")
-  //               .select("id, numero_brinco, nome")
-  //               .eq("id", mae.mae_id)
-  //               .single();
-  //             avos.maternos.mae = avoMae;
-  //           }
-  //           if (mae.pai_id) {
-  //             const { data: avoPai } = await supabase
-  //               .from("animais")
-  //               .select("id, numero_brinco, nome")
-  //               .eq("id", mae.pai_id)
-  //               .single();
-  //             avos.maternos.pai = avoPai;
-  //           }
-  //         }
-  //       })
-  //   );
-  // }
-
-  // // Buscar avós paternos (se tiver pai)
-  // if (animalBase.pai_id) {
-  //   promises.push(
-  //     supabase
-  //       .from("animais")
-  //       .select("id, numero_brinco, nome, mae_id, pai_id")
-  //       .eq("id", animalBase.pai_id)
-  //       .single()
-  //       .then(async ({ data: pai }) => {
-  //         if (pai) {
-  //           if (pai.mae_id) {
-  //             const { data: avoMae } = await supabase
-  //               .from("animais")
-  //               .select("id, numero_brinco, nome")
-  //               .eq("id", pai.mae_id)
-  //               .single();
-  //             avos.paternos.mae = avoMae;
-  //           }
-  //           if (pai.pai_id) {
-  //             const { data: avoPai } = await supabase
-  //               .from("animais")
-  //               .select("id, numero_brinco, nome")
-  //               .eq("id", pai.pai_id)
-  //               .single();
-  //             avos.paternos.pai = avoPai;
-  //           }
-  //         }
-  //       })
-  //   );
-  // }
-
-  // await Promise.all(promises);
-
-  // Tratamento de dados para a Árvore
-  // Une os arrays de filhos (geralmente um deles estará vazio dependendo do sexo, mas isso cobre ambos os casos)
   const rawFilhos = [
-    ...(animalData.filhos_como_mae || []),
-    ...(animalData.filhos_como_pai || []),
+    ...(animalData.filhos_mae || []),
+    ...(animalData.filhos_pai || []),
   ];
 
-  // Ordena filhos por brinco ou nome para ficar organizado
   const filhos: FamilyMember[] = rawFilhos
     .map((f: any) => ({
       id: f.id,
-      numero_brinco: f.numero_brinco,
+      numero_brinco: f.brinco || f.numero_brinco,
       nome: f.nome,
     }))
-    .sort((a, b) => a.numero_brinco.localeCompare(b.numero_brinco));
+    .sort((a, b) => (a.numero_brinco || "").localeCompare(b.numero_brinco || ""));
 
-  // Prepara objetos tipados para o componente
   const animalPrincipal: FamilyMember = {
     id: animalData.id,
-    numero_brinco: animalData.numero_brinco,
+    numero_brinco: animalData.brinco || animalData.numero_brinco,
     nome: animalData.nome,
-    genero: animalData.genero,
+    genero: animalData.sexo || animalData.genero,
   };
 
   const pai: FamilyMember | null = animalData.pai
     ? {
         id: animalData.pai.id,
-        numero_brinco: animalData.pai.numero_brinco,
+        numero_brinco: animalData.pai.brinco || animalData.pai.numero_brinco,
         nome: animalData.pai.nome,
       }
     : null;
@@ -183,23 +58,12 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
   const mae: FamilyMember | null = animalData.mae
     ? {
         id: animalData.mae.id,
-        numero_brinco: animalData.mae.numero_brinco,
+        numero_brinco: animalData.mae.brinco || animalData.mae.numero_brinco,
         nome: animalData.mae.nome,
       }
     : null;
 
-  // Busca histórico de vacinas
-  const { data: vacinas } = await supabase
-    .from("agenda_vacinas")
-    .select(
-      `
-      *,
-      tipo_vacina:tipos_vacina(id, nome)
-    `
-    )
-    .eq("animal_id", id)
-    .order("data_prevista", { ascending: false })
-    .limit(5);
+  const vacinas = animalData.agenda_vacinas;
 
   return (
     <AppShell title="Detalhes do Animal">
@@ -263,7 +127,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                 <div>
                   <dt className="text-sm text-muted-foreground">Raça</dt>
                   <dd className="text-sm font-medium">
-                    {animalData.raca_nome || "-"}
+                    {animalData.raca?.nome || "-"}
                   </dd>
                 </div>
                 <div>
@@ -325,8 +189,9 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                   <p className="text-xs text-muted-foreground mb-1">Mãe</p>
                   {animalData.mae_id ? (
                     <span className="text-sm font-medium">
-                      {animalData.mae_brinco ||
-                        animalData.mae_nome ||
+                      {animalData.mae?.brinco ||
+                        animalData.mae?.numero_brinco ||
+                        animalData.mae?.nome ||
                         "Sem identificação"}
                     </span>
                   ) : (
@@ -351,8 +216,9 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                   <p className="text-xs text-muted-foreground mb-1">Pai</p>
                   {animalData.pai_id ? (
                     <span className="text-sm font-medium">
-                      {animalData.pai_brinco ||
-                        animalData.pai_nome ||
+                      {animalData.pai?.brinco ||
+                        animalData.pai?.numero_brinco ||
+                        animalData.pai?.nome ||
                         "Sem identificação"}
                     </span>
                   ) : (

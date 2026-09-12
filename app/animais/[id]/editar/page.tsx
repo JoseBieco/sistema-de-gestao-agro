@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/layout/app-shell"
 import { AnimalForm } from "@/components/animals/animal-form"
+import { getAnimal } from "../../actions"
 
 interface EditarAnimalPageProps {
   params: Promise<{ id: string }>
@@ -9,9 +9,8 @@ interface EditarAnimalPageProps {
 
 export default async function EditarAnimalPage({ params }: EditarAnimalPageProps) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: animal } = await supabase.from("animais").select("*").eq("id", id).single()
+  
+  const animal = await getAnimal(id)
 
   if (!animal) {
     notFound()

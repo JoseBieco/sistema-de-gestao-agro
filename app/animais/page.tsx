@@ -1,17 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/layout/app-shell"
 import { AnimalsPageClient } from "./page-client"
+import { getAnimais } from "./actions"
 
 export default async function AnimaisPage() {
-  const supabase = await createClient()
-
-  const { data: animals } = await supabase
-    .from("animais")
-    .select(`
-      *,
-      raca:racas(id, nome)
-    `)
-    .order("created_at", { ascending: false })
+  const animals = await getAnimais()
 
   return (
     <AppShell title="Animais">

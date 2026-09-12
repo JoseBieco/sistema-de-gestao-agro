@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,25 +10,19 @@ import { AnimalsTable } from "@/components/animals/animals-table"
 import { Plus, Beef, Users } from "lucide-react"
 import type { Animal } from "@/lib/types/database"
 
+import { getAnimais } from "./actions"
+
 interface AnimalsPageClientProps {
-  initialAnimals: Animal[]
+  initialAnimals: any[]
 }
 
 export function AnimalsPageClient({ initialAnimals }: AnimalsPageClientProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [animals, setAnimals] = useState(initialAnimals)
   const [activeTab, setActiveTab] = useState("todos")
 
   async function refreshAnimals() {
-    const { data } = await supabase
-      .from("animais")
-      .select(`
-        *,
-        raca:racas(id, nome)
-      `)
-      .order("created_at", { ascending: false })
-
+    const data = await getAnimais()
     if (data) {
       setAnimals(data)
     }
