@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,13 +26,14 @@ import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import type { Raca } from "@/lib/types/database";
 import { toast } from "sonner";
 
+import { createRaca, updateRaca, deleteRaca, getRacas } from "./actions";
+
 interface RacasPageClientProps {
   initialRacas: Raca[];
 }
 
 export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [racas, setRacas] = useState(initialRacas);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,19 +57,14 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
 
     try {
       if (editingRaca) {
-        const { error } = await supabase
-          .from("racas")
-          .update(formData)
-          .eq("id", editingRaca.id);
-        if (error) throw error;
-        else toast.success("Sucesso ao editar a raça.");
+        await updateRaca(editingRaca.id, formData);
+        toast.success("Sucesso ao editar a raça.");
       } else {
-        const { error } = await supabase.from("racas").insert(formData);
-        if (error) throw error;
-        else toast.success("Sucesso ao criar a raça.");
+        await createRaca(formData);
+        toast.success("Sucesso ao criar a raça.");
       }
 
-      const { data } = await supabase.from("racas").select("*").order("nome");
+      const data = await getRacas();
       if (data) setRacas(data);
       setDialogOpen(false);
       router.refresh();
@@ -85,9 +80,8 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
     if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
 
     try {
-      const { error } = await supabase.from("racas").delete().eq("id", id);
-      if (error) throw error;
-      else toast.success("Sucesso ao excluir a raça.");
+      await deleteRaca(id);
+      toast.success("Sucesso ao excluir a raça.");
 
       setRacas(racas.filter((r) => r.id !== id));
       router.refresh();

@@ -35,7 +35,6 @@ interface VacinasPageClientProps {
 
 export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [tipos, setTipos] = useState(initialTipos);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,22 +78,16 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
     setLoading(true);
 
     try {
+      const { createTipoVacina, updateTipoVacina, getTiposVacina } = await import("@/app/vacinas/actions");
+
       if (editingTipo) {
-        const { error } = await supabase
-          .from("tipos_vacina")
-          .update(formData)
-          .eq("id", editingTipo.id);
-        if (error) throw error;
+        await updateTipoVacina(editingTipo.id, formData);
       } else {
-        const { error } = await supabase.from("tipos_vacina").insert(formData);
-        if (error) throw error;
+        await createTipoVacina(formData);
       }
 
-      const { data } = await supabase
-        .from("tipos_vacina")
-        .select("*")
-        .order("nome");
-      if (data) setTipos(data);
+      const data = await getTiposVacina();
+      if (data) setTipos(data as any);
       setDialogOpen(false);
       router.refresh();
       toast.success("Sucesso ao salvar novo tipo de vacina.");
@@ -110,11 +103,8 @@ export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
     if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return;
 
     try {
-      const { error } = await supabase
-        .from("tipos_vacina")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
+      const { deleteTipoVacina } = await import("@/app/vacinas/actions");
+      await deleteTipoVacina(id);
 
       setTipos(tipos.filter((t) => t.id !== id));
       router.refresh();

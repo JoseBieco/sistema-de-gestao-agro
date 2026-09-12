@@ -25,7 +25,6 @@ interface AgendaPageClientProps {
 
 export function AgendaPageClient({ initialAgenda }: AgendaPageClientProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [agenda, setAgenda] = useState(initialAgenda)
   const [activeTab, setActiveTab] = useState("pendentes")
   const [applicationDialogOpen, setApplicationDialogOpen] = useState(false)
@@ -33,17 +32,10 @@ export function AgendaPageClient({ initialAgenda }: AgendaPageClientProps) {
   const [selectedVaccine, setSelectedVaccine] = useState<AgendaVacinaExtended | null>(null)
 
   async function refreshAgenda() {
-    const { data } = await supabase
-      .from("agenda_vacinas")
-      .select(`
-        *,
-        animal:animais(id, numero_brinco, nome, genero),
-        tipo_vacina:tipos_vacina(id, nome, doses_por_ano, dias_entre_doses)
-      `)
-      .order("data_prevista", { ascending: true })
-
+    const { getAgendas } = await import("@/app/vacinas/actions")
+    const data = await getAgendas()
     if (data) {
-      setAgenda(data)
+      setAgenda(data as any)
     }
     router.refresh()
   }

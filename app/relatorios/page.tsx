@@ -1,44 +1,36 @@
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/layout/app-shell";
 import { RelatoriosClient } from "@/components/reports/relatorios-client";
 import { CotacoesBIClient } from "@/components/reports/cotacoes-bi";
 
 export default async function RelatoriosPage() {
-  const supabase = await createClient();
-
   const currentYear = new Date().getFullYear();
-  const startOfYear = `${currentYear}-01-01`;
-  const endOfYear = `${currentYear}-12-31`;
+  const startOfYear = new Date(`${currentYear}-01-01`);
+  const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
 
-  const [
-    { data: animais },
-    { data: transacoes },
-    { data: vacinas },
-    { data: parcelas },
-    { data: cotacoes },
-  ] = await Promise.all([
-    supabase.from("animais").select("*, raca:racas(nome)"),
-    supabase
-      .from("transacoes")
-      .select("*, parceiro:parceiros(nome)")
-      .gte("data_negociacao", startOfYear)
-      .lte("data_negociacao", endOfYear),
-    supabase
-      .from("agenda_vacinas")
-      .select(
-        "*, animal:animais(numero_brinco, nome), tipo_vacina:tipos_vacina(nome)"
-      )
-      .gte("data_prevista", startOfYear)
-      .lte("data_prevista", endOfYear),
-    supabase
-      .from("parcelas")
-      .select("*, transacao:transacoes(tipo, parceiro:parceiros(nome))")
-      .gte("data_vencimento", startOfYear)
-      .lte("data_vencimento", endOfYear),
-    supabase
-      .from("cotacoes_historicas")
-      .select("*")
-      .order("data", { ascending: false }),
+  const [animais, transacoes, vacinas, parcelas, cotacoes] = await Promise.all([
+    prisma.animal.findMany({ include: { raca: true } }),
+    prisma.transacao.findMany({
+      where: {
+        data_negociacao: { gte: startOfYear, lte: endOfYear },
+      },
+      include: { parceiro: true },
+    }),
+    prisma.agendaVacina.findMany({
+      where: {
+        data_prevista: { gte: startOfYear, lte: endOfYear },
+      },
+      include: { animal: true, tipo_vacina: true },
+    }),
+    prisma.parcela.findMany({
+      where: {
+        data_vencimento: { gte: startOfYear, lte: endOfYear },
+      },
+      include: { transacao: { include: { parceiro: true } } },
+    }),
+    prisma.cotacaoHistorica.findMany({
+      orderBy: { data: "desc" },
+    }),
   ]);
 
   return (

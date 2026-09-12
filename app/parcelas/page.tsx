@@ -1,21 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/layout/app-shell"
 import { ParcelasPageClient } from "./page-client"
+import { getParcelas } from "./actions"
 
 export default async function ParcelasPage() {
-  const supabase = await createClient()
-
-  const { data: parcelas } = await supabase
-    .from("parcelas")
-    .select(`
-      *,
-      transacao:transacoes(
-        id,
-        tipo,
-        parceiro:parceiros(id, nome)
-      )
-    `)
-    .order("data_vencimento", { ascending: true })
+  const parcelas = await getParcelas()
 
   return (
     <AppShell title="Parcelas">

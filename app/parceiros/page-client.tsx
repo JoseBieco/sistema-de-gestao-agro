@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { createParceiro, updateParceiro, deleteParceiro } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +44,6 @@ export function ParceirosPageClient({
   initialParceiros,
 }: ParceirosPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [parceiros, setParceiros] = useState(initialParceiros);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,13 +58,17 @@ export function ParceirosPageClient({
     observacoes: "",
   });
 
+  useEffect(() => {
+    setParceiros(initialParceiros);
+  }, [initialParceiros]);
+
   function openDialog(parceiro?: Parceiro) {
     if (parceiro) {
       setEditingParceiro(parceiro);
       setFormData({
         nome: parceiro.nome,
-        tipo: parceiro.tipo,
-        documento: parceiro.documento || "",
+        tipo: parceiro.tipo as TipoParceiro,
+        documento: parceiro.cpf_cnpj || "",
         telefone: parceiro.telefone || "",
         email: parceiro.email || "",
         endereco: parceiro.endereco || "",
@@ -91,29 +94,19 @@ export function ParceirosPageClient({
     setLoading(true);
 
     try {
+      const dataToSave = {
+        ...formData,
+        cpf_cnpj: formData.documento
+      };
+
       if (editingParceiro) {
-        const { error } = await supabase
-          .from("parceiros")
-          .update(formData)
-          .eq("id", editingParceiro.id);
-        if (error) {
-          toast.error("Erro ao atualizar parceiro:" + error);
-          throw error;
-        } else toast.success("Parceiro atualizado com sucesso.");
+        await updateParceiro(editingParceiro.id, dataToSave);
+        toast.success("Parceiro atualizado com sucesso.");
       } else {
-        const { error } = await supabase
-          .from("parceiros")
-          .insert({ ...formData, ativo: true });
-        if (error) throw error;
+        await createParceiro({ ...dataToSave, ativo: true });
+        toast.success("Parceiro criado com sucesso.");
       }
-      // Atualizar o state sem necessitar de buscar as informações no banco novamente
-      const { data } = await supabase
-        .from("parceiros")
-        .select("*")
-        .order("nome");
-      if (data) setParceiros(data);
       setDialogOpen(false);
-      router.refresh();
     } catch (error) {
       toast.error("Erro ao salvar parceiro:" + error);
       console.error("Erro ao salvar parceiro:", error);
@@ -126,12 +119,8 @@ export function ParceirosPageClient({
     if (!confirm("Tem certeza que deseja excluir este parceiro?")) return;
 
     try {
-      const { error } = await supabase.from("parceiros").delete().eq("id", id);
-      if (error) throw error;
-
-      setParceiros(parceiros.filter((p) => p.id !== id));
+      await deleteParceiro(id);
       toast.success("Sucesso ao excluir o parceiro.");
-      router.refresh();
     } catch (error) {
       toast.error("Erro ao excluir parceiro:" + error);
       console.error("Erro ao excluir parceiro:", error);

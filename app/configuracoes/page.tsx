@@ -1,16 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { ConfiguracoesClient } from "@/components/settings/configuracoes-client";
+import { getRacas } from "@/app/racas/actions";
+import { getTiposVacina } from "@/app/vacinas/actions";
+import { getAnimais } from "@/app/animais/actions";
 
 export default async function ConfiguracoesPage() {
-  const supabase = await createClient();
-
-  const [{ data: racas }, { data: tiposVacina }, { count: totalAnimais }] =
-    await Promise.all([
-      supabase.from("racas").select("*").order("nome"),
-      supabase.from("tipos_vacina").select("*").order("nome"),
-      supabase.from("animais").select("*", { count: "exact", head: true }),
-    ]);
+  const racas = await getRacas();
+  const tiposVacina = await getTiposVacina();
+  const animais = await getAnimais();
+  const totalAnimais = animais.length;
 
   return (
     <AppShell title="Configurações">

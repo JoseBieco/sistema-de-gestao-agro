@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+
 import { Button } from "@/components/ui/button";
+import { payParcela } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,7 +55,6 @@ export function ParcelasPageClient({
   initialParcelas,
 }: ParcelasPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [parcelas, setParcelas] = useState(initialParcelas);
   const [activeTab, setActiveTab] = useState("pendentes");
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
@@ -83,24 +83,10 @@ export function ParcelasPageClient({
     setImageViewerOpen(true);
   }
 
-  async function refreshParcelas() {
-    const { data } = await supabase
-      .from("parcelas")
-      .select(
-        `
-        *,
-        transacao:transacoes(
-          id,
-          tipo,
-          parceiro:parceiros(id, nome)
-        )
-      `
-      )
-      .order("data_vencimento", { ascending: true });
-
-    if (data) setParcelas(data);
-    router.refresh();
-  }
+  // Update parcelas whenever initialParcelas changes (revalidation)
+  useEffect(() => {
+    setParcelas(initialParcelas);
+  }, [initialParcelas]);
 
   function openPaymentDialog(parcela: ParcelaExtended) {
     setSelectedParcela(parcela);
@@ -122,37 +108,12 @@ export function ParcelasPageClient({
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from("parcelas")
-        .update({
-          status: "pago",
-          data_pagamento: paymentData.data_pagamento,
-          data_baixa_promissoria: paymentData.data_baixa_promissoria || null,
-          foto_promissoria_frente_url: fotoPromissoria || null,
-        })
-        .eq("id", selectedParcela.id);
+      await payParcela(selectedParcela.id, {
+        data_pagamento: paymentData.data_pagamento,
+        data_baixa_promissoria: paymentData.data_baixa_promissoria,
+      });
 
-      if (error) throw error;
-
-      // Check if all parcels are paid to finalize transaction
-      const { data: allParcelas } = await supabase
-        .from("parcelas")
-        .select("status")
-        .eq("transacao_id", selectedParcela.transacao_id);
-
-      if (allParcelas?.every((p) => p.status === "pago")) {
-        await supabase
-          .from("transacoes")
-          .update({ status: "finalizada" })
-          .eq("id", selectedParcela.transacao_id);
-      }
-
-      await refreshParcelas();
       setPaymentDialogOpen(false);
-
-      // Abrir recibo automaticamente após pagar
-      // const updatedParcela = { ...selectedParcela, status: 'pago' as const, data_pagamento: paymentData.data_pagamento }
-      // openReceiptDialog(updatedParcela)
     } catch (error) {
       console.error("Erro ao registrar pagamento:", error);
     } finally {

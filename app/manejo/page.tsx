@@ -1,24 +1,22 @@
-import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { ManagementClient } from "@/components/management/management-client";
 import { Animal } from "@/lib/types/database";
+import { getLocais } from "../locais/actions";
+import { getAnimais } from "../animais/actions";
 
 export default async function ManejoPage() {
-  const supabase = await createClient();
-
   const [locaisRes, animaisRes] = await Promise.all([
-    supabase.from("locais").select("*").order("nome"),
-    supabase
-      .from("animais")
-      .select("id, numero_brinco, nome, local_id")
-      .eq("status", "ativo"),
+    getLocais(),
+    getAnimais()
   ]);
+
+  const activeAnimais = animaisRes ? animaisRes.filter((a: any) => a.status === "ativo") : [];
 
   return (
     <AppShell title="Manejo de Pastagens">
       <ManagementClient
-        locais={locaisRes.data || []}
-        animais={(animaisRes.data || []) as Animal[]}
+        locais={locaisRes || []}
+        animais={activeAnimais as any[]}
       />
     </AppShell>
   );

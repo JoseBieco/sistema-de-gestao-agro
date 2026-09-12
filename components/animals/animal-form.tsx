@@ -4,7 +4,6 @@ import type React from "react";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,31 +22,33 @@ import type { Animal, Raca, Genero, OrigemAnimal } from "@/lib/types/database";
 import { differenceInMonths, parseISO } from "date-fns";
 import { toast } from "sonner";
 
+import { getRacas } from "@/app/racas/actions";
+import { getAnimais, createAnimal, updateAnimal } from "@/app/animais/actions";
+
 interface AnimalFormProps {
-  animal?: Animal;
+  animal?: any;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [racas, setRacas] = useState<Raca[]>([]);
-  const [animais, setAnimais] = useState<Animal[]>([]);
+  const [animais, setAnimais] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    numero_brinco: animal?.numero_brinco || "",
+    numero_brinco: animal?.numero_brinco || animal?.brinco || "",
     nome: animal?.nome || "",
-    genero: animal?.genero || ("M" as Genero),
-    data_nascimento: animal?.data_nascimento || "",
+    genero: animal?.genero || animal?.sexo || "M",
+    data_nascimento: animal?.data_nascimento ? animal.data_nascimento.toISOString().split('T')[0] : "",
     peso_nascimento: animal?.peso_nascimento?.toString() || "",
-    origem: animal?.origem || ("nascido" as OrigemAnimal),
+    origem: animal?.origem || "nascido",
     raca_id: animal?.raca_id || "default_raca_id",
     mae_id: animal?.mae_id || "default_mae_id",
     pai_id: animal?.pai_id || "default_pai_id",
     vacina_brucelose: animal?.vacina_brucelose || false,
-    data_brucelose: animal?.data_brucelose || "",
+    data_brucelose: animal?.data_brucelose ? animal.data_brucelose.toISOString().split('T')[0] : "",
     observacoes: animal?.observacoes || "",
   });
 
@@ -57,16 +58,14 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
 
   async function loadData() {
     const [racasRes, animaisRes] = await Promise.all([
-      supabase.from("racas").select("*").order("nome"),
-      supabase
-        .from("animais")
-        .select("id, numero_brinco, nome, genero, data_nascimento")
-        .neq("status", "morto") // Não listar animais mortos como pais
-        .neq("status", "vendido"), // Opcional: não listar vendidos
+      getRacas(),
+      getAnimais()
     ]);
 
-    if (racasRes.data) setRacas(racasRes.data);
-    if (animaisRes.data) setAnimais(animaisRes.data);
+    if (racasRes) setRacas(racasRes);
+    if (animaisRes) {
+      setAnimais(animaisRes.filter((a: any) => a.status !== "morto" && a.status !== "vendido"));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,21 +86,14 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
         raca_id: cleanId(formData.raca_id),
         mae_id: cleanId(formData.mae_id),
         pai_id: cleanId(formData.pai_id),
-        data_nascimento: formData.data_nascimento || null,
-        data_brucelose: formData.data_brucelose || null,
+        data_nascimento: formData.data_nascimento ? new Date(formData.data_nascimento) : null,
+        data_brucelose: formData.data_brucelose ? new Date(formData.data_brucelose) : null,
       };
 
       if (animal?.id) {
-        const { error } = await supabase
-          .from("animais")
-          .update(data)
-          .eq("id", animal.id);
-        if (error) throw error;
+        await updateAnimal(animal.id, data);
       } else {
-        const { error } = await supabase
-          .from("animais")
-          .insert({ ...data, status: "ativo" });
-        if (error) throw error;
+        await createAnimal({ ...data, status: "ativo" });
       }
 
       onSuccess?.();

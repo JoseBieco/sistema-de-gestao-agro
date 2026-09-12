@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gestão Pecuária 360",
+  title: "Agro360 Pro",
   description:
     "Sistema completo de gestão agropecuária - Controle de rebanho, sanitário e financeiro",
   keywords: [
