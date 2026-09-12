@@ -84,7 +84,7 @@ export function ReceiptDialog({
   const nomePagador =
     parcela.transacao?.parceiro?.nome ||
     "................................................";
-  const documentoPagador = parcela.transacao?.parceiro?.documento || "";
+  const cpfCnpjPagador = parcela.transacao?.parceiro?.cpf_cnpj || "";
   const dataPagamento = parcela.data_pagamento
     ? formatDate(parcela.data_pagamento)
     : formatDate(new Date().toISOString());
@@ -126,8 +126,8 @@ export function ReceiptDialog({
             <div className="content space-y-6 text-lg leading-relaxed">
               <p>
                 Recebemos de <strong>{nomePagador}</strong>
-                {documentoPagador && (
-                  <span> (CPF/CNPJ: {documentoPagador})</span>
+                {cpfCnpjPagador && (
+                  <span> (CPF/CNPJ: {cpfCnpjPagador})</span>
                 )}
                 , a importância supra de <strong>{valorFormatado}</strong>.
               </p>

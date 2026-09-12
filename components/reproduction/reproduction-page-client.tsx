@@ -10,7 +10,7 @@ import { ReproductionFormDialog } from "./reproduction-form-dialog";
 import { Plus, Heart, Baby, CalendarClock, Edit } from "lucide-react"; // Import Edit
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/utils/format";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays } from "date-fns";
 import type { Animal, CicloReprodutivo } from "@/lib/types/database";
 
 interface ReproductionPageClientProps {
@@ -67,7 +67,7 @@ export function ReproductionPageClient({
 
   function getDaysToDate(dateStr?: string) {
     if (!dateStr) return null;
-    return differenceInDays(parseISO(dateStr), new Date());
+    return differenceInDays(new Date(dateStr), new Date());
   }
 
   function StatusBadge({ status }: { status: string }) {

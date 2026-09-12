@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, X } from "lucide-react";
 import type { Animal, Raca, Genero, OrigemAnimal } from "@/lib/types/database";
-import { differenceInMonths, parseISO } from "date-fns";
+import { differenceInMonths } from "date-fns";
 import { toast } from "sonner";
 
 import { getRacas } from "@/app/racas/actions";
@@ -135,7 +135,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
     if (candidato.data_nascimento) {
       const idadeMeses = differenceInMonths(
         new Date(),
-        parseISO(candidato.data_nascimento)
+        new Date(candidato.data_nascimento)
       );
       return idadeMeses >= 12; // Mínimo 12 meses para aparecer na lista
     }

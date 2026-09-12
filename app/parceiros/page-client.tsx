@@ -51,7 +51,7 @@ export function ParceirosPageClient({
   const [formData, setFormData] = useState({
     nome: "",
     tipo: "ambos" as TipoParceiro,
-    documento: "",
+    cpf_cnpj: "",
     telefone: "",
     email: "",
     endereco: "",
@@ -68,7 +68,7 @@ export function ParceirosPageClient({
       setFormData({
         nome: parceiro.nome,
         tipo: parceiro.tipo as TipoParceiro,
-        documento: parceiro.cpf_cnpj || "",
+        cpf_cnpj: parceiro.cpf_cnpj || "",
         telefone: parceiro.telefone || "",
         email: parceiro.email || "",
         endereco: parceiro.endereco || "",
@@ -79,7 +79,7 @@ export function ParceirosPageClient({
       setFormData({
         nome: "",
         tipo: "ambos",
-        documento: "",
+        cpf_cnpj: "",
         telefone: "",
         email: "",
         endereco: "",
@@ -94,21 +94,29 @@ export function ParceirosPageClient({
     setLoading(true);
 
     try {
-      const dataToSave = {
-        ...formData,
-        cpf_cnpj: formData.documento
-      };
+      const dataToSave = { ...formData };
 
       if (editingParceiro) {
-        const res = await updateParceiro(editingParceiro.id, dataToSave); if (res?.error) { toast.error("Erro: " + res.error); return; }
+        const res = await updateParceiro(editingParceiro.id, dataToSave);
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
         toast.success("Parceiro atualizado com sucesso.");
       } else {
-        const res = await createParceiro({ ...dataToSave, ativo: true }); if (res?.error) { toast.error("Erro: " + res.error); return; }
+        const res = await createParceiro({ ...dataToSave, ativo: true });
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
         toast.success("Parceiro criado com sucesso.");
       }
       setDialogOpen(false);
     } catch (error) {
-      toast.error("Erro ao salvar parceiro:: " + (error instanceof Error ? error.message : error));
+      toast.error(
+        "Erro ao salvar parceiro:: " +
+          (error instanceof Error ? error.message : error),
+      );
       console.error("Erro ao salvar parceiro:", error);
     } finally {
       setLoading(false);
@@ -119,10 +127,17 @@ export function ParceirosPageClient({
     if (!confirm("Tem certeza que deseja excluir este parceiro?")) return;
 
     try {
-      const res = await deleteParceiro(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
+      const res = await deleteParceiro(id);
+      if (res?.error) {
+        toast.error("Erro: " + res.error);
+        return;
+      }
       toast.success("Sucesso ao excluir o parceiro.");
     } catch (error) {
-      toast.error("Erro ao excluir parceiro:: " + (error instanceof Error ? error.message : error));
+      toast.error(
+        "Erro ao excluir parceiro:: " +
+          (error instanceof Error ? error.message : error),
+      );
       console.error("Erro ao excluir parceiro:", error);
     }
   }
@@ -177,8 +192,8 @@ export function ParceirosPageClient({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {parceiro.documento
-                        ? formatDocument(parceiro.documento)
+                      {parceiro.cpf_cnpj
+                        ? formatDocument(parceiro.cpf_cnpj)
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -259,12 +274,12 @@ export function ParceirosPageClient({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="documento">CPF/CNPJ</Label>
+                <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
                 <Input
-                  id="documento"
-                  value={formData.documento}
+                  id="cpf_cnpj"
+                  value={formData.cpf_cnpj}
                   onChange={(e) =>
-                    setFormData({ ...formData, documento: e.target.value })
+                    setFormData({ ...formData, cpf_cnpj: e.target.value })
                   }
                   placeholder="000.000.000-00"
                 />

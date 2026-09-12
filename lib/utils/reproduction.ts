@@ -1,4 +1,4 @@
-import { addDays, format, parseISO } from "date-fns";
+import { addDays, format } from "date-fns";
 
 // Constantes baseadas na raça Nelore
 const GESTACAO_MEDIA_DIAS = 290; // Média entre 286 e 294
@@ -19,7 +19,7 @@ export function calcularPrevisoes(dados: {
 
   // Se foi coberta, calculamos o parto
   if (dados.data_cobertura) {
-    const dataCob = parseISO(dados.data_cobertura);
+    const dataCob = new Date(dados.data_cobertura);
     resultado.data_prevista_parto = addDays(dataCob, GESTACAO_MEDIA_DIAS);
     resultado.data_diagnostico = addDays(dataCob, 45); // Diagnóstico via toque/ultrassom
     resultado.status_sugerido = "aguardando_diagnostico";
@@ -30,14 +30,14 @@ export function calcularPrevisoes(dados: {
 
   // Se não foi coberta, mas teve cio recente
   else if (dados.data_ultimo_cio) {
-    const dataCio = parseISO(dados.data_ultimo_cio);
+    const dataCio = new Date(dados.data_ultimo_cio);
     resultado.data_prevista_cio = addDays(dataCio, CICLO_ESTRAL_DIAS);
     resultado.status_sugerido = "vazia";
   }
 
   // Se acabou de parir (está em anestro pós-parto)
   else if (dados.data_ultimo_parto) {
-    const dataParto = parseISO(dados.data_ultimo_parto);
+    const dataParto = new Date(dados.data_ultimo_parto);
     // Estima retorno ao cio
     resultado.data_prevista_cio = addDays(dataParto, RETORNO_POS_PARTO_MIN);
     resultado.status_sugerido = "lactacao";

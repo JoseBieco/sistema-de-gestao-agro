@@ -51,7 +51,7 @@ export interface Parceiro {
   id: string;
   nome: string;
   tipo: TipoParceiro;
-  documento?: string;
+  cpf_cnpj?: string;
   telefone?: string;
   email?: string;
   endereco?: string;

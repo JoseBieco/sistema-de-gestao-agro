@@ -24,7 +24,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { HistoricoPesagem } from "@/lib/types/database";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface WeightHistoryProps {
@@ -54,8 +54,8 @@ export function WeightHistory({
         const prevRecord = sortedHistory[index - 1];
         const weightDiff = record.peso - prevRecord.peso;
         const daysDiff = differenceInDays(
-          parseISO(record.data_pesagem),
-          parseISO(prevRecord.data_pesagem)
+          new Date(record.data_pesagem),
+          new Date(prevRecord.data_pesagem)
         );
 
         if (daysDiff > 0) {
@@ -68,8 +68,8 @@ export function WeightHistory({
 
   // Dados para o gráfico
   const chartData = sortedHistory.map((h) => ({
-    date: format(parseISO(h.data_pesagem), "dd/MM/yy"),
-    fullDate: format(parseISO(h.data_pesagem), "dd 'de' MMMM 'de' yyyy", {
+    date: format(new Date(h.data_pesagem), "dd/MM/yy"),
+    fullDate: format(new Date(h.data_pesagem), "dd 'de' MMMM 'de' yyyy", {
       locale: ptBR,
     }),
     weight: h.peso,

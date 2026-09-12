@@ -97,7 +97,7 @@ export function TransacaoDetailClient({
 
   const [editTransacaoOpen, setEditTransacaoOpen] = useState(false);
   const [editForm, setEditForm] = useState({
-    data_negociacao: transacao.data_negociacao.split("T")[0],
+    data_negociacao: new Date(transacao.data_negociacao).toISOString().split("T")[0],
     forma_pagamento: transacao.forma_pagamento || "",
     status: transacao.status || "pendente",
     observacoes: transacao.observacoes || "",
@@ -316,7 +316,7 @@ export function TransacaoDetailClient({
                 <div>
                   <p className="text-sm text-muted-foreground">Documento</p>
                   <p className="font-medium">
-                    {transacao.parceiro?.documento || "Não informado"}
+                    {transacao.parceiro?.cpf_cnpj || "Não informado"}
                   </p>
                 </div>
                 <div>
@@ -693,7 +693,7 @@ export function TransacaoDetailClient({
                   id="data_pagamento"
                   name="data_pagamento"
                   type="date"
-                  defaultValue={selectedParcela?.data_pagamento?.split("T")[0]}
+                  defaultValue={selectedParcela?.data_pagamento ? new Date(selectedParcela.data_pagamento).toISOString().split("T")[0] : ""}
                 />
               </div>
             </div>
@@ -706,7 +706,7 @@ export function TransacaoDetailClient({
                 name="data_baixa_promissoria"
                 type="date"
                 defaultValue={
-                  selectedParcela?.data_baixa_promissoria?.split("T")[0]
+                  selectedParcela?.data_baixa_promissoria ? new Date(selectedParcela.data_baixa_promissoria).toISOString().split("T")[0] : ""
                 }
               />
             </div>
