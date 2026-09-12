@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,8 @@ interface MoveAnimalsDialogProps {
   defaultOriginId?: string | null; // Se abrirmos o modal a partir de um pasto específico
 }
 
+import { moveAnimals } from "@/app/locais/actions";
+
 export function MoveAnimalsDialog({
   open,
   onOpenChange,
@@ -43,7 +45,6 @@ export function MoveAnimalsDialog({
   animais,
   defaultOriginId,
 }: MoveAnimalsDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [originId, setOriginId] = useState<string>(defaultOriginId || "all");
   const [destinationId, setDestinationId] = useState<string>("");
@@ -92,26 +93,12 @@ export function MoveAnimalsDialog({
         return {
           animal_id: animalId,
           local_origem_id: animal?.local_id || null,
-          local_destino_id: destinationId,
           data_movimentacao: date,
           motivo: motivo || "Movimentação de rotina",
         };
       });
 
-      // 1. Registrar histórico
-      const { error: historyError } = await supabase
-        .from("historico_movimentacao")
-        .insert(records);
-
-      if (historyError) throw historyError;
-
-      // 2. Atualizar animais
-      const { error: updateError } = await supabase
-        .from("animais")
-        .update({ local_id: destinationId })
-        .in("id", selectedAnimals);
-
-      if (updateError) throw updateError;
+      await moveAnimals(records, destinationId, selectedAnimals);
 
       onSuccess();
       onOpenChange(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   Dialog,
   DialogContent,
@@ -28,12 +28,13 @@ interface NewPastureDialogProps {
   onSuccess: () => void;
 }
 
+import { createLocal } from "@/app/locais/actions";
+
 export function NewPastureDialog({
   open,
   onOpenChange,
   onSuccess,
 }: NewPastureDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -47,14 +48,12 @@ export function NewPastureDialog({
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("locais").insert({
+      await createLocal({
         nome: formData.nome,
         tipo: formData.tipo,
-        area_hectares: Number(formData.area_hectares) || 0,
-        capacidade_maxima: Number(formData.capacidade_maxima) || 0,
+        area_hectares: Number(formData.area_hectares) || null,
+        capacidade_maxima: Number(formData.capacidade_maxima) || null,
       });
-
-      if (error) throw error;
 
       onSuccess();
       onOpenChange(false);

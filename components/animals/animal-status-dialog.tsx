@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   Dialog,
   DialogContent,
@@ -32,13 +32,14 @@ interface AnimalStatusDialogProps {
   onSuccess: () => void;
 }
 
+import { updateAnimal } from "@/app/animais/actions";
+
 export function AnimalStatusDialog({
   animal,
   open,
   onOpenChange,
   onSuccess,
 }: AnimalStatusDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<StatusAnimal>("ativo");
   const [dataStatus, setDataStatus] = useState(
@@ -53,19 +54,14 @@ export function AnimalStatusDialog({
     try {
       const updateData: any = {
         status,
-        data_status: dataStatus,
+        data_status: new Date(dataStatus),
       };
 
       if (status === "morto") {
         updateData.motivo_morte = motivo;
       }
 
-      const { error } = await supabase
-        .from("animais")
-        .update(updateData)
-        .eq("id", animal.id);
-
-      if (error) throw error;
+      await updateAnimal(animal.id, updateData);
 
       onSuccess();
       onOpenChange(false);

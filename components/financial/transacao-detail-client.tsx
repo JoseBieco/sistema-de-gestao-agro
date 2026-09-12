@@ -32,7 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils/format";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   ArrowLeft,
   ShoppingCart,
@@ -58,11 +58,6 @@ import type {
   Raca,
 } from "@/lib/types/database";
 
-interface AnimaisTransacaoExtended {
-  animal: Animal & { raca?: Raca };
-  item?: ItemTransacao;
-}
-
 interface TransacaoExtended {
   id: string;
   tipo: TipoTransacao;
@@ -77,7 +72,7 @@ interface TransacaoExtended {
   parceiro?: Parceiro;
   itens?: ItemTransacao[];
   parcelas?: Parcela[];
-  animais_transacao?: AnimaisTransacaoExtended[];
+  animais?: any[];
 }
 
 interface TransacaoDetailClientProps {
@@ -108,12 +103,7 @@ export function TransacaoDetailClient({
       .reduce((acc, p) => acc + p.valor, 0),
   };
 
-  const animais =
-    transacao.animais_transacao?.map((at) => ({
-      ...at.animal,
-      valor: at.item?.valor_unitario,
-      descricao: at.item?.descricao,
-    })) || [];
+  const animais = transacao.animais || [];
 
   async function handleUpdateParcela(data: {
     status: string;
@@ -124,22 +114,17 @@ export function TransacaoDetailClient({
     if (!selectedParcela) return;
 
     setLoading(true);
-    const supabase = createClient();
 
-    const { error } = await supabase
-      .from("parcelas")
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", selectedParcela.id);
-
-    if (!error) {
+    try {
+      const { updateParcela } = await import("@/app/parcelas/actions");
+      const updated = await updateParcela(selectedParcela.id, data);
       setParcelas((prev) =>
-        prev.map((p) => (p.id === selectedParcela.id ? { ...p, ...data } : p))
+        prev.map((p) => (p.id === selectedParcela.id ? { ...p, ...updated } : p))
       );
       setDialogOpen(false);
       setSelectedParcela(null);
+    } catch (e) {
+      console.error(e);
     }
 
     setLoading(false);

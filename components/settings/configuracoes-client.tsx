@@ -87,28 +87,19 @@ export function ConfiguracoesClient({
       descricao: (formData.get("descricao") as string) || null,
     };
 
-    const supabase = createClient();
+    const { createRaca, updateRaca } = await import("@/app/racas/actions");
 
     if (editingRaca) {
-      const { error } = await supabase
-        .from("racas")
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq("id", editingRaca.id);
-
-      if (!error) {
+      const updated = await updateRaca(editingRaca.id, data);
+      if (updated) {
         setRacas((prev) =>
           prev.map((r) => (r.id === editingRaca.id ? { ...r, ...data } : r))
         );
       }
     } else {
-      const { data: newRaca, error } = await supabase
-        .from("racas")
-        .insert(data)
-        .select()
-        .single();
-
-      if (!error && newRaca) {
-        setRacas((prev) => [...prev, newRaca]);
+      const newRaca = await createRaca(data);
+      if (newRaca) {
+        setRacas((prev) => [...prev, newRaca as any]);
       }
     }
 
@@ -133,28 +124,19 @@ export function ConfiguracoesClient({
       apenas_femeas: formData.get("apenas_femeas") === "on",
     };
 
-    const supabase = createClient();
+    const { createTipoVacina, updateTipoVacina } = await import("@/app/vacinas/actions");
 
     if (editingVacina) {
-      const { error } = await supabase
-        .from("tipos_vacina")
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq("id", editingVacina.id);
-
-      if (!error) {
+      const updated = await updateTipoVacina(editingVacina.id, data);
+      if (updated) {
         setTiposVacina((prev) =>
           prev.map((v) => (v.id === editingVacina.id ? { ...v, ...data } : v))
         );
       }
     } else {
-      const { data: newVacina, error } = await supabase
-        .from("tipos_vacina")
-        .insert(data)
-        .select()
-        .single();
-
-      if (!error && newVacina) {
-        setTiposVacina((prev) => [...prev, newVacina]);
+      const newVacina = await createTipoVacina(data);
+      if (newVacina) {
+        setTiposVacina((prev) => [...prev, newVacina as any]);
       }
     }
 
@@ -166,23 +148,17 @@ export function ConfiguracoesClient({
   async function handleDeleteRaca(id: string) {
     if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
 
-    const supabase = createClient();
-    const { error } = await supabase.from("racas").delete().eq("id", id);
-
-    if (!error) {
-      setRacas((prev) => prev.filter((r) => r.id !== id));
-    }
+    const { deleteRaca } = await import("@/app/racas/actions");
+    await deleteRaca(id);
+    setRacas((prev) => prev.filter((r) => r.id !== id));
   }
 
   async function handleDeleteVacina(id: string) {
     if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return;
 
-    const supabase = createClient();
-    const { error } = await supabase.from("tipos_vacina").delete().eq("id", id);
-
-    if (!error) {
-      setTiposVacina((prev) => prev.filter((v) => v.id !== id));
-    }
+    const { deleteTipoVacina } = await import("@/app/vacinas/actions");
+    await deleteTipoVacina(id);
+    setTiposVacina((prev) => prev.filter((v) => v.id !== id));
   }
 
   return (
