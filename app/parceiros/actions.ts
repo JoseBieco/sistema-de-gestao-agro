@@ -14,18 +14,31 @@ export async function getParceiro(id: string) {
 }
 
 export async function createParceiro(data: any) {
-  const result = await parceiroService.createParceiro(data);
-  revalidatePath("/parceiros");
-  return result;
+  try {
+    const result = await parceiroService.createParceiro(data);
+    revalidatePath("/parceiros");
+    return { success: true, data: result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function updateParceiro(id: string, data: any) {
-  const result = await parceiroService.updateParceiro(id, data);
-  revalidatePath("/parceiros");
-  return result;
+  try {
+    const result = await parceiroService.updateParceiro(id, data);
+    revalidatePath("/parceiros");
+    return { success: true, data: result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function deleteParceiro(id: string) {
-  await parceiroService.deleteParceiro(id);
-  revalidatePath("/parceiros");
+  try {
+    await parceiroService.deleteParceiro(id);
+    revalidatePath("/parceiros");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }

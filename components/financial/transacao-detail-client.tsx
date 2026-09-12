@@ -166,7 +166,7 @@ export function TransacaoDetailClient({
   async function handleDeleteTransacao() {
     if (!confirm("Tem certeza que deseja EXCLUIR esta transação? Isso removerá as parcelas e reverterá o vínculo dos animais.")) return;
     try {
-      await deleteTransacao(transacao.id);
+      const res = await deleteTransacao(transacao.id); if (res?.error) { toast.error("Erro: " + res.error); return; }
       toast.success("Transação excluída.");
       router.push(isCompra ? "/compras" : "/vendas");
     } catch (error) {
@@ -453,7 +453,7 @@ export function TransacaoDetailClient({
                     animais.map((animal) => (
                       <TableRow key={animal.id}>
                         <TableCell className="font-mono">
-                          {animal.numero_brinco || "-"}
+                          {animal.brinco || "-"}
                         </TableCell>
                         <TableCell>
                           <Link
@@ -466,10 +466,10 @@ export function TransacaoDetailClient({
                         <TableCell>
                           <Badge
                             variant={
-                              animal.genero === "M" ? "default" : "secondary"
+                              animal.sexo === "M" ? "default" : "secondary"
                             }
                           >
-                            {animal.genero === "M" ? "Macho" : "Fêmea"}
+                            {animal.sexo === "M" ? "Macho" : "Fêmea"}
                           </Badge>
                         </TableCell>
                         <TableCell>{animal.raca?.nome || "-"}</TableCell>

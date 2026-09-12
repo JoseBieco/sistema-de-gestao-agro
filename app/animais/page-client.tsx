@@ -32,16 +32,16 @@ export function AnimalsPageClient({ initialAnimals }: AnimalsPageClientProps) {
   const filteredAnimals = animals.filter((a) => {
     if (activeTab === "todos") return true
     if (activeTab === "ativos") return a.status === "ativo"
-    if (activeTab === "machos") return a.genero === "M" && a.status === "ativo"
-    if (activeTab === "femeas") return a.genero === "F" && a.status === "ativo"
+    if (activeTab === "machos") return a.sexo === "M" && a.status === "ativo"
+    if (activeTab === "femeas") return a.sexo === "F" && a.status === "ativo"
     return true
   })
 
   const stats = {
     total: animals.length,
     ativos: animals.filter((a) => a.status === "ativo").length,
-    machos: animals.filter((a) => a.genero === "M" && a.status === "ativo").length,
-    femeas: animals.filter((a) => a.genero === "F" && a.status === "ativo").length,
+    machos: animals.filter((a) => a.sexo === "M" && a.status === "ativo").length,
+    femeas: animals.filter((a) => a.sexo === "F" && a.status === "ativo").length,
   }
 
   return (

@@ -100,15 +100,15 @@ export function ParceirosPageClient({
       };
 
       if (editingParceiro) {
-        await updateParceiro(editingParceiro.id, dataToSave);
+        const res = await updateParceiro(editingParceiro.id, dataToSave); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Parceiro atualizado com sucesso.");
       } else {
-        await createParceiro({ ...dataToSave, ativo: true });
+        const res = await createParceiro({ ...dataToSave, ativo: true }); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Parceiro criado com sucesso.");
       }
       setDialogOpen(false);
     } catch (error) {
-      toast.error("Erro ao salvar parceiro:" + error);
+      toast.error("Erro ao salvar parceiro:: " + (error instanceof Error ? error.message : error));
       console.error("Erro ao salvar parceiro:", error);
     } finally {
       setLoading(false);
@@ -119,10 +119,10 @@ export function ParceirosPageClient({
     if (!confirm("Tem certeza que deseja excluir este parceiro?")) return;
 
     try {
-      await deleteParceiro(id);
+      const res = await deleteParceiro(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
       toast.success("Sucesso ao excluir o parceiro.");
     } catch (error) {
-      toast.error("Erro ao excluir parceiro:" + error);
+      toast.error("Erro ao excluir parceiro:: " + (error instanceof Error ? error.message : error));
       console.error("Erro ao excluir parceiro:", error);
     }
   }

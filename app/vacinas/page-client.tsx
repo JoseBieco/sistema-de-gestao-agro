@@ -159,7 +159,7 @@ export function AgendaPageClient({ initialAgenda }: AgendaPageClientProps) {
                     filteredAgenda.map((v) => (
                       <TableRow key={v.id}>
                         <TableCell>
-                          <span className="font-medium">{v.animal?.numero_brinco || v.animal?.nome || "-"}</span>
+                          <span className="font-medium">{v.animal?.brinco || v.animal?.nome || "-"}</span>
                         </TableCell>
                         <TableCell>{v.tipo_vacina?.nome || "-"}</TableCell>
                         <TableCell>{v.dose_numero}ª dose</TableCell>

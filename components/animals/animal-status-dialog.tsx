@@ -61,13 +61,13 @@ export function AnimalStatusDialog({
         updateData.motivo_morte = motivo;
       }
 
-      await updateAnimal(animal.id, updateData);
+      const res = await updateAnimal(animal.id, updateData); if (res?.error) { toast.error("Erro: " + res.error); return; }
 
       onSuccess();
       onOpenChange(false);
       toast.success("Sucesso ao atualizar o status do animal.");
     } catch (error) {
-      toast.error("Erro ao atualizar status: " + error);
+      toast.error("Erro ao atualizar status: : " + (error instanceof Error ? error.message : error));
       console.error("Erro ao atualizar status:", error);
     } finally {
       setLoading(false);
@@ -81,7 +81,7 @@ export function AnimalStatusDialog({
           <DialogTitle>Alterar Status do Animal</DialogTitle>
           <DialogDescription>
             Animal:{" "}
-            {animal?.numero_brinco || animal?.nome || "Sem identificação"}
+            {animal?.brinco || animal?.nome || "Sem identificação"}
           </DialogDescription>
         </DialogHeader>
 

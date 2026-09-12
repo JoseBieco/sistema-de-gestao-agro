@@ -57,10 +57,10 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
 
     try {
       if (editingRaca) {
-        await updateRaca(editingRaca.id, formData);
+        const res = await updateRaca(editingRaca.id, formData); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Sucesso ao editar a raça.");
       } else {
-        await createRaca(formData);
+        const res = await createRaca(formData); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Sucesso ao criar a raça.");
       }
 
@@ -69,7 +69,7 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
       setDialogOpen(false);
       router.refresh();
     } catch (error) {
-      toast.error("Erro ao salvar raça:" + error);
+      toast.error("Erro ao salvar raça:: " + (error instanceof Error ? error.message : error));
       console.error("Erro ao salvar raça:", error);
     } finally {
       setLoading(false);
@@ -80,13 +80,13 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
     if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
 
     try {
-      await deleteRaca(id);
+      const res = await deleteRaca(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
       toast.success("Sucesso ao excluir a raça.");
 
       setRacas(racas.filter((r) => r.id !== id));
       router.refresh();
     } catch (error) {
-      toast.error("Erro ao excluir raça:" + error);
+      toast.error("Erro ao excluir raça:: " + (error instanceof Error ? error.message : error));
       console.error("Erro ao excluir raça:", error);
     }
   }

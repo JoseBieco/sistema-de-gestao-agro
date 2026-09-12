@@ -124,10 +124,10 @@ export function ReproductionFormDialog({
       const { createCiclo, updateCiclo } = await import("@/app/reproducao/actions");
 
       if (cicloToEdit) {
-        await updateCiclo(cicloToEdit.id, payload);
+        const res = await updateCiclo(cicloToEdit.id, payload); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Ciclo atualizado com sucesso!");
       } else {
-        await createCiclo(payload);
+        const res = await createCiclo(payload); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Novo acompanhamento iniciado!");
       }
 
@@ -172,7 +172,7 @@ export function ReproductionFormDialog({
               <SelectContent>
                 {femeas.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    {a.numero_brinco} - {a.nome}
+                    {a.brinco} - {a.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -234,7 +234,7 @@ export function ReproductionFormDialog({
                   <SelectContent>
                     {touros.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
-                        {a.nome} ({a.numero_brinco})
+                        {a.nome} ({a.brinco})
                       </SelectItem>
                     ))}
                   </SelectContent>

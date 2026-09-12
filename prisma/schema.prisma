@@ -78,6 +78,7 @@ model Animal {
   nome           String?
   raca_id        String
   sexo           String
+  origem         String    @default("nascido") // nascido, comprado
   data_nascimento DateTime?
   peso_nascimento Float?
   peso_atual     Float?

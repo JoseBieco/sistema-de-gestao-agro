@@ -97,7 +97,7 @@ export function VaccineApplicationDialog({
       });
       toast.success("Sucesso ao adicionar a vacina.");
     } catch (error) {
-      toast.error("Erro ao registrar vacinas: " + error);
+      toast.error("Erro ao registrar vacinas: : " + (error instanceof Error ? error.message : error));
       console.error("Erro ao registrar vacinas:", error);
     } finally {
       setLoading(false);
@@ -117,7 +117,7 @@ export function VaccineApplicationDialog({
       (t) => t.id === formData.tipo_vacina_id
     );
     const filteredAnimals = selectedVaccine?.apenas_femeas
-      ? animais.filter((a) => a.genero === "F")
+      ? animais.filter((a) => a.sexo === "F")
       : animais;
     setSelectedAnimals(filteredAnimals.map((a) => a.id));
   }
@@ -126,7 +126,7 @@ export function VaccineApplicationDialog({
     (t) => t.id === formData.tipo_vacina_id
   );
   const filteredAnimals = selectedVaccine?.apenas_femeas
-    ? animais.filter((a) => a.genero === "F")
+    ? animais.filter((a) => a.sexo === "F")
     : animais;
 
   return (
@@ -204,11 +204,11 @@ export function VaccineApplicationDialog({
                       onCheckedChange={() => toggleAnimal(animal.id)}
                     />
                     <span className="text-sm">
-                      {animal.numero_brinco ||
+                      {animal.brinco ||
                         animal.nome ||
                         animal.id.slice(0, 8)}
                       <span className="text-muted-foreground ml-1">
-                        ({animal.genero === "M" ? "M" : "F"})
+                        ({animal.sexo === "M" ? "M" : "F"})
                       </span>
                     </span>
                   </label>

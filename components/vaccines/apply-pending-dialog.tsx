@@ -53,7 +53,7 @@ export function ApplyPendingDialog({
       onOpenChange(false);
       toast.success("Sucesso ao aplicar a vacina.");
     } catch (error) {
-      toast.error("Erro ao aplicar vacina: " + error);
+      toast.error("Erro ao aplicar vacina: : " + (error instanceof Error ? error.message : error));
       console.error("Erro ao aplicar vacina:", error);
     } finally {
       setLoading(false);

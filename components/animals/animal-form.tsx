@@ -38,9 +38,9 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
   const [animais, setAnimais] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    numero_brinco: animal?.numero_brinco || animal?.brinco || "",
+    brinco: animal?.brinco || animal?.brinco || "",
     nome: animal?.nome || "",
-    genero: animal?.genero || animal?.sexo || "M",
+    sexo: animal?.sexo || animal?.sexo || "M",
     data_nascimento: animal?.data_nascimento ? animal.data_nascimento.toISOString().split('T')[0] : "",
     peso_nascimento: animal?.peso_nascimento?.toString() || "",
     origem: animal?.origem || "nascido",
@@ -77,9 +77,9 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
       };
 
       const data = {
-        brinco: formData.numero_brinco,
+        brinco: formData.brinco,
         nome: formData.nome,
-        sexo: formData.genero,
+        sexo: formData.sexo,
         origem: formData.origem,
         observacoes: formData.observacoes,
         peso_nascimento: formData.peso_nascimento
@@ -92,18 +92,26 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
       };
 
       if (animal?.id) {
-        await updateAnimal(animal.id, data);
+        const res = await updateAnimal(animal.id, data);
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
       } else {
-        await createAnimal({ ...data, status: "ATIVO" });
+        const res = await createAnimal({ ...data, status: "ATIVO" });
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
       }
 
       onSuccess?.();
       toast.success("Animal salvo com sucesso!");
       router.push("/animais");
       router.refresh();
-    } catch (error) {
-      console.error("Erro ao salvar animal:", error);
-      toast.error("Erro ao salvar animal:" + error);
+    } catch (error: any) {
+      console.error("Erro interno:", error);
+      toast.error("Erro ao salvar animal: " + (error.message || error));
     } finally {
       setLoading(false);
     }
@@ -137,10 +145,10 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
   };
 
   const femeas = animais.filter(
-    (a) => a.genero === "F" && isIdadeCompativel(a)
+    (a) => a.sexo === "F" && isIdadeCompativel(a)
   );
   const machos = animais.filter(
-    (a) => a.genero === "M" && isIdadeCompativel(a)
+    (a) => a.sexo === "M" && isIdadeCompativel(a)
   );
 
   return (
@@ -154,12 +162,12 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="numero_brinco">Número do Brinco</Label>
+                <Label htmlFor="brinco">Número do Brinco</Label>
                 <Input
-                  id="numero_brinco"
-                  value={formData.numero_brinco}
+                  id="brinco"
+                  value={formData.brinco}
                   onChange={(e) =>
-                    setFormData({ ...formData, numero_brinco: e.target.value })
+                    setFormData({ ...formData, brinco: e.target.value })
                   }
                   placeholder="Ex: B-2024-001"
                 />
@@ -179,11 +187,11 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="genero">Gênero</Label>
+                <Label htmlFor="sexo">Gênero</Label>
                 <Select
-                  value={formData.genero}
+                  value={formData.sexo}
                   onValueChange={(value: Genero) =>
-                    setFormData({ ...formData, genero: value })
+                    setFormData({ ...formData, sexo: value })
                   }
                 >
                   <SelectTrigger>
@@ -291,7 +299,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
                   <SelectItem value="default_mae_id">Não informado</SelectItem>
                   {femeas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.numero_brinco || a.nome}
+                      {a.brinco || a.nome}
                       {a.data_nascimento &&
                         ` (${new Date(a.data_nascimento).getFullYear()})`}
                     </SelectItem>
@@ -315,7 +323,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
                   <SelectItem value="default_pai_id">Não informado</SelectItem>
                   {machos.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.numero_brinco || a.nome}
+                      {a.brinco || a.nome}
                       {a.data_nascimento &&
                         ` (${new Date(a.data_nascimento).getFullYear()})`}
                     </SelectItem>

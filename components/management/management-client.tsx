@@ -64,7 +64,7 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
     if (!confirm(`Tem certeza que deseja excluir o local "${local.nome}"?`)) return;
 
     try {
-      await deleteLocal(local.id);
+      const res = await deleteLocal(local.id); if (res?.error) { toast.error("Erro: " + res.error); return; }
       toast.success("Local excluído com sucesso.");
       handleRefresh();
     } catch (e) {

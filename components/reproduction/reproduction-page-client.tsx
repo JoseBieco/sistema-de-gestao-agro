@@ -119,7 +119,7 @@ export function ReproductionPageClient({
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
             <CardTitle className="text-lg">
-              {ciclo.animal?.numero_brinco} - {ciclo.animal?.nome}
+              {ciclo.animal?.brinco} - {ciclo.animal?.nome}
             </CardTitle>
             <div className="flex gap-2">
               <Button

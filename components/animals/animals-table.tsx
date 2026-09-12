@@ -31,9 +31,9 @@ export function AnimalsTable({ animals, onRefresh }: AnimalsTableProps) {
 
   const columns: ColumnDef<Animal>[] = [
     {
-      accessorKey: "numero_brinco",
+      accessorKey: "brinco",
       header: "Brinco",
-      cell: ({ row }) => <span className="font-medium">{row.original.numero_brinco || "-"}</span>,
+      cell: ({ row }) => <span className="font-medium">{row.original.brinco || "-"}</span>,
     },
     {
       accessorKey: "nome",
@@ -41,11 +41,11 @@ export function AnimalsTable({ animals, onRefresh }: AnimalsTableProps) {
       cell: ({ row }) => row.original.nome || "-",
     },
     {
-      accessorKey: "genero",
+      accessorKey: "sexo",
       header: "Gênero",
       cell: ({ row }) => (
-        <Badge variant={row.original.genero === "M" ? "default" : "secondary"}>
-          {row.original.genero === "M" ? "Macho" : "Fêmea"}
+        <Badge variant={row.original.sexo === "M" ? "default" : "secondary"}>
+          {row.original.sexo === "M" ? "Macho" : "Fêmea"}
         </Badge>
       ),
     },
@@ -133,7 +133,7 @@ export function AnimalsTable({ animals, onRefresh }: AnimalsTableProps) {
 
   return (
     <>
-      <DataTable columns={columns} data={animals} searchKey="numero_brinco" searchPlaceholder="Buscar por brinco..." />
+      <DataTable columns={columns} data={animals} searchKey="brinco" searchPlaceholder="Buscar por brinco..." />
       <AnimalStatusDialog
         animal={selectedAnimal}
         open={statusDialogOpen}

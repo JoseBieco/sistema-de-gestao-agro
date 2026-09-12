@@ -35,22 +35,22 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
   const filhos: FamilyMember[] = rawFilhos
     .map((f: any) => ({
       id: f.id,
-      numero_brinco: f.brinco || f.numero_brinco,
+      brinco: f.brinco || f.brinco,
       nome: f.nome,
     }))
-    .sort((a, b) => (a.numero_brinco || "").localeCompare(b.numero_brinco || ""));
+    .sort((a, b) => (a.brinco || "").localeCompare(b.brinco || ""));
 
   const animalPrincipal: FamilyMember = {
     id: animalData.id,
-    numero_brinco: animalData.brinco || animalData.numero_brinco,
+    brinco: animalData.brinco || animalData.brinco,
     nome: animalData.nome,
-    genero: animalData.sexo || animalData.genero,
+    sexo: animalData.sexo || animalData.sexo,
   };
 
   const pai: FamilyMember | null = animalData.pai
     ? {
         id: animalData.pai.id,
-        numero_brinco: animalData.pai.brinco || animalData.pai.numero_brinco,
+        brinco: animalData.pai.brinco || animalData.pai.brinco,
         nome: animalData.pai.nome,
       }
     : null;
@@ -58,7 +58,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
   const mae: FamilyMember | null = animalData.mae
     ? {
         id: animalData.mae.id,
-        numero_brinco: animalData.mae.brinco || animalData.mae.numero_brinco,
+        brinco: animalData.mae.brinco || animalData.mae.brinco,
         nome: animalData.mae.nome,
       }
     : null;
@@ -78,7 +78,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
             </Link>
             <div>
               <h2 className="text-2xl font-bold">
-                {animalData.numero_brinco || animalData.nome || "Animal"}
+                {animalData.brinco || animalData.nome || "Animal"}
               </h2>
               <div className="flex items-center gap-2 mt-1">
                 <Badge className={getStatusColor(animalData.status)}>
@@ -86,9 +86,9 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                     animalData.status.slice(1)}
                 </Badge>
                 <Badge
-                  variant={animalData.genero === "M" ? "default" : "secondary"}
+                  variant={animalData.sexo === "M" ? "default" : "secondary"}
                 >
-                  {animalData.genero === "M" ? "Macho" : "Fêmea"}
+                  {animalData.sexo === "M" ? "Macho" : "Fêmea"}
                 </Badge>
               </div>
             </div>
@@ -115,7 +115,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                 <div>
                   <dt className="text-sm text-muted-foreground">Brinco</dt>
                   <dd className="text-sm font-medium">
-                    {animalData.numero_brinco || "-"}
+                    {animalData.brinco || "-"}
                   </dd>
                 </div>
                 <div>
@@ -190,7 +190,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                   {animalData.mae_id ? (
                     <span className="text-sm font-medium">
                       {animalData.mae?.brinco ||
-                        animalData.mae?.numero_brinco ||
+                        animalData.mae?.brinco ||
                         animalData.mae?.nome ||
                         "Sem identificação"}
                     </span>
@@ -217,7 +217,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                   {animalData.pai_id ? (
                     <span className="text-sm font-medium">
                       {animalData.pai?.brinco ||
-                        animalData.pai?.numero_brinco ||
+                        animalData.pai?.brinco ||
                         animalData.pai?.nome ||
                         "Sem identificação"}
                     </span>
@@ -238,7 +238,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
               </div>
 
               {/* BRUCELOSE (Apenas Fêmeas) */}
-              {animalData.genero === "F" && (
+              {animalData.sexo === "F" && (
                 <div className="rounded-lg border p-3">
                   <div className="flex items-center justify-between">
                     <div>

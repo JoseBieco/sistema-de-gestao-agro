@@ -10,18 +10,31 @@ export async function getRacas() {
 }
 
 export async function createRaca(data: any) {
-  const result = await racaService.createRaca(data);
-  revalidatePath("/racas");
-  return result;
+  try {
+    const result = await racaService.createRaca(data);
+    revalidatePath("/racas");
+    return { success: true, data: result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function updateRaca(id: string, data: any) {
-  const result = await racaService.updateRaca(id, data);
-  revalidatePath("/racas");
-  return result;
+  try {
+    const result = await racaService.updateRaca(id, data);
+    revalidatePath("/racas");
+    return { success: true, data: result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function deleteRaca(id: string) {
-  await racaService.deleteRaca(id);
-  revalidatePath("/racas");
+  try {
+    await racaService.deleteRaca(id);
+    revalidatePath("/racas");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }

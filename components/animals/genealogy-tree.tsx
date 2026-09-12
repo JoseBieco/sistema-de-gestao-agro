@@ -8,9 +8,9 @@ import Link from "next/link";
 // Tipagem Forte e Exportada
 export interface FamilyMember {
   id: string;
-  numero_brinco: string;
+  brinco: string;
   nome: string | null;
-  genero?: string; // Opcional, útil para cores se disponível
+  sexo?: string; // Opcional, útil para cores se disponível
 }
 
 interface GenealogyTreeProps {
@@ -72,9 +72,9 @@ export function GenealogyTree({
                   <div className="w-full overflow-hidden">
                     <p
                       className="truncate text-sm font-bold text-primary"
-                      title={animal.numero_brinco}
+                      title={animal.brinco}
                     >
-                      {animal.numero_brinco}
+                      {animal.brinco}
                     </p>
                     <p
                       className="truncate text-lg font-bold"
@@ -166,7 +166,7 @@ function FamilyCard({
     <Link
       href={`/animais/${member.id}`}
       className={commonClasses}
-      title={`Ver detalhes de ${member.numero_brinco}`}
+      title={`Ver detalhes de ${member.brinco}`}
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted group-hover:bg-primary/10 group-hover:text-primary transition-colors">
         <User className="h-5 w-5" />
@@ -176,7 +176,7 @@ function FamilyCard({
           {role}
         </span>
         <p className="truncate font-mono font-bold text-sm group-hover:text-primary">
-          {member.numero_brinco}
+          {member.brinco}
         </p>
         <p
           className="truncate text-xs text-muted-foreground"

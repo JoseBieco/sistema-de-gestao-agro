@@ -98,7 +98,7 @@ export function MoveAnimalsDialog({
         };
       });
 
-      await moveAnimals(records, destinationId, selectedAnimals);
+      const res = await moveAnimals(records, destinationId, selectedAnimals); if (res?.error) { toast.error("Erro: " + res.error); return; }
 
       onSuccess();
       onOpenChange(false);
@@ -106,7 +106,7 @@ export function MoveAnimalsDialog({
       setDestinationId("");
       toast.success("Sucesso ao movimentar os animais.");
     } catch (error) {
-      toast.error("Erro na movimentação: " + error);
+      toast.error("Erro na movimentação: : " + (error instanceof Error ? error.message : error));
       console.error("Erro na movimentação:", error);
     } finally {
       setLoading(false);
@@ -220,7 +220,7 @@ export function MoveAnimalsDialog({
                         htmlFor={animal.id}
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                       >
-                        {animal.numero_brinco || "S/ Brinco"}
+                        {animal.brinco || "S/ Brinco"}
                         <span className="text-muted-foreground ml-1 font-normal">
                           - {animal.nome || "Sem nome"}
                         </span>

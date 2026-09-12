@@ -78,9 +78,9 @@ export interface TipoVacina {
 
 export interface Animal {
   id: string;
-  numero_brinco?: string;
+  brinco?: string;
   nome?: string;
-  genero: Genero;
+  sexo: Genero;
   data_nascimento?: string;
   peso_nascimento?: number;
   peso_atual?: number;
@@ -246,9 +246,9 @@ export const TIPOS_COTACAO: Record<
 };
 
 export interface AnimalFormData {
-  numero_brinco?: string;
+  brinco?: string;
   nome?: string;
-  genero: Genero;
+  sexo: Genero;
   data_nascimento?: string;
   peso_nascimento?: number;
   origem: OrigemAnimal;

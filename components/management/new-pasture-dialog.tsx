@@ -80,17 +80,17 @@ export function NewPastureDialog({
       };
 
       if (localToEdit) {
-        await updateLocal(localToEdit.id, payload);
+        const res = await updateLocal(localToEdit.id, payload); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Local atualizado com sucesso.");
       } else {
-        await createLocal(payload);
+        const res = await createLocal(payload); if (res?.error) { toast.error("Erro: " + res.error); return; }
         toast.success("Sucesso ao criar novo local.");
       }
 
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Erro ao criar local: " + error);
+      toast.error("Erro ao criar local: : " + (error instanceof Error ? error.message : error));
       console.error("Erro ao criar local:", error);
     } finally {
       setLoading(false);

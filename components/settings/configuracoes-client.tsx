@@ -116,7 +116,7 @@ export function ConfiguracoesClient({
       const { createRaca, updateRaca } = await import("@/app/racas/actions");
 
       if (editingRaca) {
-        const updated = await updateRaca(editingRaca.id, data);
+        const res = await updateRaca(editingRaca.id, data); if (res?.error) { toast.error("Erro: " + res.error); return; } const updated = res?.data;
         if (updated) {
           setRacas((prev) =>
             prev.map((r) => (r.id === editingRaca.id ? { ...r, ...data } : r))
@@ -124,7 +124,7 @@ export function ConfiguracoesClient({
           toast.success("Raça atualizada com sucesso.");
         }
       } else {
-        const newRaca = await createRaca(data);
+        const res = await createRaca(data); if (res?.error) { toast.error("Erro: " + res.error); return; } const newRaca = res?.data;
         if (newRaca) {
           setRacas((prev) => [...prev, newRaca]);
           toast.success("Raça criada com sucesso.");
@@ -169,7 +169,7 @@ export function ConfiguracoesClient({
       );
 
       if (editingVacina) {
-        const updated = await updateTipoVacina(editingVacina.id, data);
+        const res = await updateTipoVacina(editingVacina.id, data); if (res?.error) { toast.error("Erro: " + res.error); return; } const updated = res?.data;
         if (updated) {
           setTiposVacina((prev) =>
             prev.map((v) => (v.id === editingVacina.id ? { ...v, ...data, meses_aplicacao: mesesAplicacao } : v))
@@ -177,7 +177,7 @@ export function ConfiguracoesClient({
           toast.success("Vacina atualizada com sucesso.");
         }
       } else {
-        const newVacina = await createTipoVacina(data);
+        const res = await createTipoVacina(data); if (res?.error) { toast.error("Erro: " + res.error); return; } const newVacina = res?.data;
         if (newVacina) {
           setTiposVacina((prev) => [...prev, newVacina]);
           toast.success("Vacina criada com sucesso.");
@@ -199,7 +199,7 @@ export function ConfiguracoesClient({
     if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
 
     const { deleteRaca } = await import("@/app/racas/actions");
-    await deleteRaca(id);
+    const res = await deleteRaca(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
     setRacas((prev) => prev.filter((r) => r.id !== id));
     toast.success("Raça excluída com sucesso.");
   }
@@ -208,7 +208,7 @@ export function ConfiguracoesClient({
     if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return;
 
     const { deleteTipoVacina } = await import("@/app/vacinas/actions");
-    await deleteTipoVacina(id);
+    const res = await deleteTipoVacina(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
     setTiposVacina((prev) => prev.filter((v) => v.id !== id));
     toast.success("Vacina excluída com sucesso.");
   }
