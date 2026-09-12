@@ -47,8 +47,6 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
     raca_id: animal?.raca_id || "default_raca_id",
     mae_id: animal?.mae_id || "default_mae_id",
     pai_id: animal?.pai_id || "default_pai_id",
-    vacina_brucelose: animal?.vacina_brucelose || false,
-    data_brucelose: animal?.data_brucelose ? animal.data_brucelose.toISOString().split('T')[0] : "",
     observacoes: animal?.observacoes || "",
   });
 
@@ -79,7 +77,11 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
       };
 
       const data = {
-        ...formData,
+        brinco: formData.numero_brinco,
+        nome: formData.nome,
+        sexo: formData.genero,
+        origem: formData.origem,
+        observacoes: formData.observacoes,
         peso_nascimento: formData.peso_nascimento
           ? Number.parseFloat(formData.peso_nascimento)
           : null,
@@ -87,13 +89,12 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
         mae_id: cleanId(formData.mae_id),
         pai_id: cleanId(formData.pai_id),
         data_nascimento: formData.data_nascimento ? new Date(formData.data_nascimento) : null,
-        data_brucelose: formData.data_brucelose ? new Date(formData.data_brucelose) : null,
       };
 
       if (animal?.id) {
         await updateAnimal(animal.id, data);
       } else {
-        await createAnimal({ ...data, status: "ativo" });
+        await createAnimal({ ...data, status: "ATIVO" });
       }
 
       onSuccess?.();
@@ -323,47 +324,6 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
               </Select>
             </div>
 
-            {/* Brucelose - Only for females */}
-            {formData.genero === "F" && (
-              <div className="rounded-lg border p-4 space-y-4 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="vacina_brucelose"
-                      className="text-sm font-medium"
-                    >
-                      Vacina de Brucelose
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Obrigatória para fêmeas de 3 a 8 meses
-                    </p>
-                  </div>
-                  <Switch
-                    id="vacina_brucelose"
-                    checked={formData.vacina_brucelose}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, vacina_brucelose: checked })
-                    }
-                  />
-                </div>
-                {formData.vacina_brucelose && (
-                  <div className="space-y-2">
-                    <Label htmlFor="data_brucelose">Data da Vacinação</Label>
-                    <Input
-                      id="data_brucelose"
-                      type="date"
-                      value={formData.data_brucelose}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          data_brucelose: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações</Label>

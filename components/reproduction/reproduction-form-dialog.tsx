@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +44,6 @@ export function ReproductionFormDialog({
   touros,
   cicloToEdit,
 }: ReproductionFormDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -108,7 +106,6 @@ export function ReproductionFormDialog({
     setLoading(true);
 
     try {
-      // Objeto com os dados comuns
       const payload = {
         animal_id: formData.animal_id,
         data_ultimo_parto: formData.data_ultimo_parto || null,
@@ -116,7 +113,6 @@ export function ReproductionFormDialog({
         data_cobertura: formData.data_cobertura || null,
         touro_id: formData.touro_id || null,
         tipo_cobertura: formData.tipo_cobertura,
-        // As previsões são sempre recalculadas ao salvar
         data_prevista_parto: previsoes.data_prevista_parto,
         data_prevista_cio: previsoes.data_prevista_cio,
         data_diagnostico_gestacao: previsoes.data_diagnostico,
@@ -125,28 +121,13 @@ export function ReproductionFormDialog({
         ativo: true,
       };
 
-      if (cicloToEdit) {
-        // --- MODO EDIÇÃO (UPDATE) ---
-        const { error } = await supabase
-          .from("ciclos_reprodutivos")
-          .update(payload)
-          .eq("id", cicloToEdit.id);
+      const { createCiclo, updateCiclo } = await import("@/app/reproducao/actions");
 
-        if (error) throw error;
+      if (cicloToEdit) {
+        await updateCiclo(cicloToEdit.id, payload);
         toast.success("Ciclo atualizado com sucesso!");
       } else {
-        // --- MODO CRIAÇÃO (INSERT) ---
-        // Desativa ciclos anteriores apenas se for novo
-        await supabase
-          .from("ciclos_reprodutivos")
-          .update({ ativo: false })
-          .eq("animal_id", formData.animal_id);
-
-        const { error } = await supabase
-          .from("ciclos_reprodutivos")
-          .insert(payload);
-
-        if (error) throw error;
+        await createCiclo(payload);
         toast.success("Novo acompanhamento iniciado!");
       }
 

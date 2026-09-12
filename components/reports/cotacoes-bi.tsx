@@ -70,7 +70,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
       .map((c) => c.data)
       .sort()
       .reverse();
-    return parseISO(datas[0]);
+    return new Date(datas[0]);
   }, [cotacoes]);
 
   const [selectedTipos, setSelectedTipos] = useState<TipoCotacao[]>([
@@ -109,8 +109,8 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
         break;
       case "custom":
         return {
-          start: parseISO(customDateRange.start),
-          end: parseISO(customDateRange.end),
+          start: new Date(customDateRange.start),
+          end: new Date(customDateRange.end),
         };
       default:
         start = subMonths(end, 6);
@@ -122,9 +122,9 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
   // Filtrar cotações pelo período e tipos selecionados
   const filteredCotacoes = useMemo(() => {
     return cotacoes.filter((c) => {
-      const dataCotacao = parseISO(c.data);
+      const dataCotacao = new Date(c.data);
       const dentroDoIntervalo = isWithinInterval(dataCotacao, dateRange);
-      const tipoSelecionado = selectedTipos.includes(c.tipo as TipoCotacao);
+      const tipoSelecionado = selectedTipos.includes(c.produto as TipoCotacao);
       return dentroDoIntervalo && tipoSelecionado;
     });
   }, [cotacoes, dateRange, selectedTipos]);
@@ -139,7 +139,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
         dataMap.set(dateKey, { date: dateKey });
       }
       const entry = dataMap.get(dateKey)!;
-      entry[c.tipo] = c.valor;
+      entry[c.produto] = c.valor;
     });
 
     return Array.from(dataMap.values()).sort((a, b) =>
@@ -175,7 +175,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
 
     selectedTipos.forEach((tipo) => {
       const cotacoesTipo = filteredCotacoes
-        .filter((c) => c.tipo === tipo)
+        .filter((c) => c.produto === tipo)
         .sort((a, b) => a.data.localeCompare(b.data));
 
       if (cotacoesTipo.length > 0) {
@@ -210,7 +210,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
 
   // Tipos disponíveis (baseado nas cotações existentes)
   const tiposDisponiveis = useMemo(() => {
-    const tipos = new Set(cotacoes.map((c) => c.tipo));
+    const tipos = new Set(cotacoes.map((c) => c.produto));
     return Array.from(tipos) as TipoCotacao[];
   }, [cotacoes]);
 
@@ -229,7 +229,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
     return (
       <div className="bg-background border rounded-lg shadow-lg p-3 min-w-[180px]">
         <p className="text-sm font-medium text-muted-foreground mb-2">
-          {format(parseISO(label), "dd MMM yyyy", { locale: ptBR })}
+          {format(new Date(label), "dd MMM yyyy", { locale: ptBR })}
         </p>
         <div className="space-y-1.5">
           {payload.map((entry) => {
@@ -484,7 +484,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
                   <XAxis
                     dataKey="date"
                     tickFormatter={(value) =>
-                      format(parseISO(value), "dd/MM", { locale: ptBR })
+                      format(new Date(value), "dd/MM", { locale: ptBR })
                     }
                     className="text-xs"
                     tick={{ fill: "hsl(var(--muted-foreground))" }}
@@ -561,7 +561,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
                     .map((row, index) => (
                       <tr key={index} className="border-b hover:bg-muted/50">
                         <td className="py-3 px-2">
-                          {format(parseISO(String(row.date)), "dd/MM/yyyy", {
+                          {format(new Date(String(row.date)), "dd/MM/yyyy", {
                             locale: ptBR,
                           })}
                         </td>

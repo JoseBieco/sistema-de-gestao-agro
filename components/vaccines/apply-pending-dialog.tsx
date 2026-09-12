@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +30,6 @@ export function ApplyPendingDialog({
   onOpenChange,
   onSuccess,
 }: ApplyPendingDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [dataAplicacao, setDataAplicacao] = useState(
     new Date().toISOString().split("T")[0]
@@ -43,37 +41,13 @@ export function ApplyPendingDialog({
     setLoading(true);
 
     try {
-      // Update current vaccine to applied
-      const { error: updateError } = await supabase
-        .from("agenda_vacinas")
-        .update({
-          data_aplicacao: dataAplicacao,
-          status: "aplicada",
-          observacoes: observacoes || vaccine.observacoes,
-        })
-        .eq("id", vaccine.id);
-
-      if (updateError) throw updateError;
-
-      // If there are more doses needed, create next one
-      const tipoVacina = vaccine.tipo_vacina;
-      if (tipoVacina && tipoVacina.doses_por_ano > vaccine.dose_numero) {
-        const nextDate = new Date(dataAplicacao);
-        nextDate.setDate(nextDate.getDate() + tipoVacina.dias_entre_doses);
-
-        const { error: nextError } = await supabase
-          .from("agenda_vacinas")
-          .insert({
-            animal_id: vaccine.animal_id,
-            tipo_vacina_id: vaccine.tipo_vacina_id,
-            data_prevista: nextDate.toISOString().split("T")[0],
-            status: "pendente",
-            dose_numero: vaccine.dose_numero + 1,
-            vacina_pai_id: vaccine.id,
-          });
-
-        if (nextError) throw nextError;
-      }
+      const { applyPendingVacina } = await import("@/app/vacinas/actions");
+      
+      await applyPendingVacina({
+        agenda_id: vaccine.id,
+        data_aplicacao: dataAplicacao,
+        observacoes: observacoes || vaccine.observacoes || "",
+      });
 
       onSuccess();
       onOpenChange(false);

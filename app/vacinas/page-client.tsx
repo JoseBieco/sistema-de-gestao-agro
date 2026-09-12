@@ -1,312 +1,210 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Edit, Trash2, Loader2, Syringe } from "lucide-react";
-import type { TipoVacina } from "@/lib/types/database";
-import { toast } from "sonner";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { VaccineApplicationDialog } from "@/components/vaccines/vaccine-application-dialog"
+import { ApplyPendingDialog } from "@/components/vaccines/apply-pending-dialog"
+import { formatDate, getStatusColor } from "@/lib/utils/format"
+import { Plus, Syringe, AlertCircle, CheckCircle, Clock, Calendar } from "lucide-react"
+import type { AgendaVacina, Animal, TipoVacina } from "@/lib/types/database"
 
-interface VacinasPageClientProps {
-  initialTipos: TipoVacina[];
+type AgendaVacinaExtended = AgendaVacina & {
+  animal?: Animal
+  tipo_vacina?: TipoVacina
 }
 
-export function VacinasPageClient({ initialTipos }: VacinasPageClientProps) {
-  const router = useRouter();
-  const [tipos, setTipos] = useState(initialTipos);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [editingTipo, setEditingTipo] = useState<TipoVacina | null>(null);
-  const [formData, setFormData] = useState({
-    nome: "",
-    descricao: "",
-    doses_por_ano: 1,
-    dias_entre_doses: 365,
-    obrigatoria: false,
-    apenas_femeas: false,
-  });
+interface AgendaPageClientProps {
+  initialAgenda: AgendaVacinaExtended[]
+}
 
-  function openDialog(tipo?: TipoVacina) {
-    if (tipo) {
-      setEditingTipo(tipo);
-      setFormData({
-        nome: tipo.nome,
-        descricao: tipo.descricao || "",
-        doses_por_ano: tipo.doses_por_ano,
-        dias_entre_doses: tipo.dias_entre_doses,
-        obrigatoria: tipo.obrigatoria,
-        apenas_femeas: tipo.apenas_femeas,
-      });
-    } else {
-      setEditingTipo(null);
-      setFormData({
-        nome: "",
-        descricao: "",
-        doses_por_ano: 1,
-        dias_entre_doses: 365,
-        obrigatoria: false,
-        apenas_femeas: false,
-      });
+export function AgendaPageClient({ initialAgenda }: AgendaPageClientProps) {
+  const router = useRouter()
+  const [agenda, setAgenda] = useState(initialAgenda)
+  const [activeTab, setActiveTab] = useState("pendentes")
+  const [applicationDialogOpen, setApplicationDialogOpen] = useState(false)
+  const [applyPendingDialogOpen, setApplyPendingDialogOpen] = useState(false)
+  const [selectedVaccine, setSelectedVaccine] = useState<AgendaVacinaExtended | null>(null)
+
+  async function refreshAgenda() {
+    const { getAgendas } = await import("@/app/vacinas/actions")
+    const data = await getAgendas()
+    if (data) {
+      setAgenda(data as any)
     }
-    setDialogOpen(true);
+    router.refresh()
   }
 
-  async function handleSubmit() {
-    if (!formData.nome.trim()) return;
-    setLoading(true);
-
-    try {
-      const { createTipoVacina, updateTipoVacina, getTiposVacina } = await import("@/app/vacinas/actions");
-
-      if (editingTipo) {
-        await updateTipoVacina(editingTipo.id, formData);
-      } else {
-        await createTipoVacina(formData);
-      }
-
-      const data = await getTiposVacina();
-      if (data) setTipos(data as any);
-      setDialogOpen(false);
-      router.refresh();
-      toast.success("Sucesso ao salvar novo tipo de vacina.");
-    } catch (error) {
-      toast.error("Erro ao salvar tipo de vacina: " + error);
-      console.error("Erro ao salvar tipo de vacina:", error);
-    } finally {
-      setLoading(false);
+  // Update status of overdue vaccines
+  const today = new Date().toISOString().split("T")[0]
+  const processedAgenda = agenda.map((v) => {
+    if (v.status === "pendente" && v.data_prevista < today) {
+      return { ...v, status: "atrasada" as const }
     }
-  }
+    return v
+  })
 
-  async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return;
+  const pendentes = processedAgenda.filter((v) => v.status === "pendente")
+  const atrasadas = processedAgenda.filter((v) => v.status === "atrasada")
+  const aplicadas = processedAgenda.filter((v) => v.status === "aplicada")
 
-    try {
-      const { deleteTipoVacina } = await import("@/app/vacinas/actions");
-      await deleteTipoVacina(id);
-
-      setTipos(tipos.filter((t) => t.id !== id));
-      router.refresh();
-    } catch (error) {
-      console.error("Erro ao excluir tipo de vacina:", error);
+  const filteredAgenda = (() => {
+    switch (activeTab) {
+      case "pendentes":
+        return pendentes
+      case "atrasadas":
+        return atrasadas
+      case "aplicadas":
+        return aplicadas
+      default:
+        return processedAgenda
     }
+  })()
+
+  function handleApplyPending(vaccine: AgendaVacinaExtended) {
+    setSelectedVaccine(vaccine)
+    setApplyPendingDialogOpen(true)
   }
 
   return (
     <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="rounded-lg bg-primary/10 p-3">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total</p>
+              <p className="text-2xl font-bold">{agenda.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="rounded-lg bg-amber-500/10 p-3">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Pendentes</p>
+              <p className="text-2xl font-bold">{pendentes.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="rounded-lg bg-red-500/10 p-3">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Atrasadas</p>
+              <p className="text-2xl font-bold">{atrasadas.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="rounded-lg bg-emerald-500/10 p-3">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Aplicadas</p>
+              <p className="text-2xl font-bold">{aplicadas.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Syringe className="h-5 w-5" />
-            Cadastro de Vacinas
+            Agenda de Vacinação
           </CardTitle>
-          <Button onClick={() => openDialog()}>
+          <Button onClick={() => setApplicationDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Vacina
+            Registrar Aplicação
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Doses/Ano</TableHead>
-                <TableHead>Intervalo</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="w-[100px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tipos.length > 0 ? (
-                tipos.map((tipo) => (
-                  <TableRow key={tipo.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{tipo.nome}</p>
-                        {tipo.descricao && (
-                          <p className="text-xs text-muted-foreground">
-                            {tipo.descricao}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{tipo.doses_por_ano}x</TableCell>
-                    <TableCell>{tipo.dias_entre_doses} dias</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {tipo.obrigatoria && (
-                          <Badge variant="destructive" className="text-xs">
-                            Obrigatória
-                          </Badge>
-                        )}
-                        {tipo.apenas_femeas && (
-                          <Badge variant="secondary" className="text-xs">
-                            Apenas Fêmeas
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDialog(tipo)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(tipo.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="pendentes">Pendentes ({pendentes.length})</TabsTrigger>
+              <TabsTrigger value="atrasadas">Atrasadas ({atrasadas.length})</TabsTrigger>
+              <TabsTrigger value="aplicadas">Aplicadas ({aplicadas.length})</TabsTrigger>
+              <TabsTrigger value="todas">Todas ({agenda.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value={activeTab} className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Animal</TableHead>
+                    <TableHead>Vacina</TableHead>
+                    <TableHead>Dose</TableHead>
+                    <TableHead>Data Prevista</TableHead>
+                    <TableHead>Data Aplicação</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-[100px]">Ações</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground py-8"
-                  >
-                    Nenhum tipo de vacina cadastrado
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredAgenda.length > 0 ? (
+                    filteredAgenda.map((v) => (
+                      <TableRow key={v.id}>
+                        <TableCell>
+                          <span className="font-medium">{v.animal?.numero_brinco || v.animal?.nome || "-"}</span>
+                        </TableCell>
+                        <TableCell>{v.tipo_vacina?.nome || "-"}</TableCell>
+                        <TableCell>{v.dose_numero}ª dose</TableCell>
+                        <TableCell>{formatDate(v.data_prevista)}</TableCell>
+                        <TableCell>{v.data_aplicacao ? formatDate(v.data_aplicacao) : "-"}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(v.status)}>
+                            {v.status.charAt(0).toUpperCase() + v.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {(v.status === "pendente" || v.status === "atrasada") && (
+                            <Button variant="outline" size="sm" onClick={() => handleApplyPending(v)}>
+                              Aplicar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Nenhuma vacina encontrada
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingTipo ? "Editar Vacina" : "Nova Vacina"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) =>
-                  setFormData({ ...formData, nome: e.target.value })
-                }
-                placeholder="Ex: Febre Aftosa"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea
-                id="descricao"
-                value={formData.descricao}
-                onChange={(e) =>
-                  setFormData({ ...formData, descricao: e.target.value })
-                }
-                placeholder="Descrição da vacina (opcional)"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="doses_por_ano">Doses por Ano</Label>
-                <Input
-                  id="doses_por_ano"
-                  type="number"
-                  min={1}
-                  value={formData.doses_por_ano}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      doses_por_ano: Number.parseInt(e.target.value) || 1,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dias_entre_doses">Dias entre Doses</Label>
-                <Input
-                  id="dias_entre_doses"
-                  type="number"
-                  min={1}
-                  value={formData.dias_entre_doses}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      dias_entre_doses: Number.parseInt(e.target.value) || 365,
-                    })
-                  }
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <Label htmlFor="obrigatoria">Vacina Obrigatória</Label>
-                <p className="text-xs text-muted-foreground">
-                  Exigida pela legislação
-                </p>
-              </div>
-              <Switch
-                id="obrigatoria"
-                checked={formData.obrigatoria}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, obrigatoria: checked })
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <Label htmlFor="apenas_femeas">Apenas Fêmeas</Label>
-                <p className="text-xs text-muted-foreground">Ex: Brucelose</p>
-              </div>
-              <Switch
-                id="apenas_femeas"
-                checked={formData.apenas_femeas}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, apenas_femeas: checked })
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || !formData.nome.trim()}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingTipo ? "Atualizar" : "Cadastrar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <VaccineApplicationDialog
+        open={applicationDialogOpen}
+        onOpenChange={setApplicationDialogOpen}
+        onSuccess={refreshAgenda}
+      />
+
+      <ApplyPendingDialog
+        vaccine={selectedVaccine}
+        open={applyPendingDialogOpen}
+        onOpenChange={setApplyPendingDialogOpen}
+        onSuccess={refreshAgenda}
+      />
     </div>
-  );
+  )
 }

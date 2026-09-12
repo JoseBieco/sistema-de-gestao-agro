@@ -4,6 +4,7 @@ import type React from "react";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -33,7 +34,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { createClient } from "@/lib/supabase/client";
 import {
   Settings,
   Palette,
@@ -53,96 +53,146 @@ interface ConfiguracoesClientProps {
   initialRacas: Raca[];
   initialTiposVacina: TipoVacina[];
   totalAnimais: number;
+  initialFazenda: any;
 }
 
 export function ConfiguracoesClient({
   initialRacas,
   initialTiposVacina,
   totalAnimais,
+  initialFazenda,
 }: ConfiguracoesClientProps) {
   const [racas, setRacas] = useState(initialRacas);
   const [tiposVacina, setTiposVacina] = useState(initialTiposVacina);
   const [editingRaca, setEditingRaca] = useState<Raca | null>(null);
   const [editingVacina, setEditingVacina] = useState<TipoVacina | null>(null);
+  const [mesesAplicacao, setMesesAplicacao] = useState<number[]>([]);
   const [racaDialogOpen, setRacaDialogOpen] = useState(false);
   const [vacinaDialogOpen, setVacinaDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSavingFazenda, setIsSavingFazenda] = useState(false);
 
   // Configurações gerais
   const [configFazenda, setConfigFazenda] = useState({
-    nome: "Fazenda Exemplo",
-    ie: "",
-    endereco: "",
-    cidade: "",
-    estado: "SP",
+    nome: initialFazenda?.nome || "Fazenda Exemplo",
+    cnpj: initialFazenda?.cnpj || "",
+    ie: initialFazenda?.ie || "",
+    endereco: initialFazenda?.endereco || "",
+    cidade: initialFazenda?.cidade || "",
+    estado: initialFazenda?.estado || "SP",
   });
+
+  async function handleSaveFazenda(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsSavingFazenda(true);
+
+    try {
+      const { updateFazenda } = await import("@/app/configuracoes/actions");
+      const result = await updateFazenda(configFazenda);
+      
+      if (result.success) {
+        toast.success("Dados da propriedade salvos com sucesso!");
+      } else {
+        toast.error("Erro ao salvar dados da propriedade.");
+      }
+    } catch (error) {
+      toast.error("Erro de conexão.");
+    } finally {
+      setIsSavingFazenda(false);
+    }
+  }
 
   async function handleSaveRaca(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      nome: formData.get("nome") as string,
-      descricao: (formData.get("descricao") as string) || null,
-    };
+    try {
+      const formData = new FormData(e.currentTarget);
+      const data = {
+        nome: formData.get("nome") as string,
+        descricao: (formData.get("descricao") as string) || null,
+      };
 
-    const { createRaca, updateRaca } = await import("@/app/racas/actions");
+      const { createRaca, updateRaca } = await import("@/app/racas/actions");
 
-    if (editingRaca) {
-      const updated = await updateRaca(editingRaca.id, data);
-      if (updated) {
-        setRacas((prev) =>
-          prev.map((r) => (r.id === editingRaca.id ? { ...r, ...data } : r))
-        );
+      if (editingRaca) {
+        const updated = await updateRaca(editingRaca.id, data);
+        if (updated) {
+          setRacas((prev) =>
+            prev.map((r) => (r.id === editingRaca.id ? { ...r, ...data } : r))
+          );
+          toast.success("Raça atualizada com sucesso.");
+        }
+      } else {
+        const newRaca = await createRaca(data);
+        if (newRaca) {
+          setRacas((prev) => [...prev, newRaca]);
+          toast.success("Raça criada com sucesso.");
+        }
       }
-    } else {
-      const newRaca = await createRaca(data);
-      if (newRaca) {
-        setRacas((prev) => [...prev, newRaca as any]);
-      }
+
+      setRacaDialogOpen(false);
+      setEditingRaca(null);
+    } catch (error) {
+      toast.error("Erro ao salvar raça.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    setRacaDialogOpen(false);
-    setEditingRaca(null);
   }
 
   async function handleSaveVacina(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      nome: formData.get("nome") as string,
-      descricao: (formData.get("descricao") as string) || null,
-      doses_por_ano:
-        Number.parseInt(formData.get("doses_por_ano") as string) || 1,
-      dias_entre_doses:
-        Number.parseInt(formData.get("dias_entre_doses") as string) || 365,
-      obrigatoria: formData.get("obrigatoria") === "on",
-      apenas_femeas: formData.get("apenas_femeas") === "on",
-    };
+    try {
+      const formData = new FormData(e.currentTarget);
+      const dose_unica = formData.get("dose_unica") === "on";
 
-    const { createTipoVacina, updateTipoVacina } = await import("@/app/vacinas/actions");
+      const data = {
+        nome: formData.get("nome") as string,
+        descricao: (formData.get("descricao") as string) || null,
+        doses_por_ano: dose_unica 
+          ? 1 
+          : Number.parseInt(formData.get("doses_por_ano") as string) || 1,
+        dias_entre_doses: dose_unica 
+          ? 0 
+          : Number.parseInt(formData.get("dias_entre_doses") as string) || 365,
+        obrigatoria: formData.get("obrigatoria") === "on",
+        apenas_femeas: formData.get("apenas_femeas") === "on",
+        dose_unica,
+        meses_aplicacao: mesesAplicacao,
+      };
 
-    if (editingVacina) {
-      const updated = await updateTipoVacina(editingVacina.id, data);
-      if (updated) {
-        setTiposVacina((prev) =>
-          prev.map((v) => (v.id === editingVacina.id ? { ...v, ...data } : v))
-        );
+      const { createTipoVacina, updateTipoVacina } = await import(
+        "@/app/vacinas/actions"
+      );
+
+      if (editingVacina) {
+        const updated = await updateTipoVacina(editingVacina.id, data);
+        if (updated) {
+          setTiposVacina((prev) =>
+            prev.map((v) => (v.id === editingVacina.id ? { ...v, ...data, meses_aplicacao: mesesAplicacao } : v))
+          );
+          toast.success("Vacina atualizada com sucesso.");
+        }
+      } else {
+        const newVacina = await createTipoVacina(data);
+        if (newVacina) {
+          setTiposVacina((prev) => [...prev, newVacina]);
+          toast.success("Vacina criada com sucesso.");
+        }
       }
-    } else {
-      const newVacina = await createTipoVacina(data);
-      if (newVacina) {
-        setTiposVacina((prev) => [...prev, newVacina as any]);
-      }
+
+      setVacinaDialogOpen(false);
+      setEditingVacina(null);
+      setMesesAplicacao([]);
+    } catch (error) {
+      toast.error("Erro ao salvar vacina.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    setVacinaDialogOpen(false);
-    setEditingVacina(null);
   }
 
   async function handleDeleteRaca(id: string) {
@@ -151,6 +201,7 @@ export function ConfiguracoesClient({
     const { deleteRaca } = await import("@/app/racas/actions");
     await deleteRaca(id);
     setRacas((prev) => prev.filter((r) => r.id !== id));
+    toast.success("Raça excluída com sucesso.");
   }
 
   async function handleDeleteVacina(id: string) {
@@ -159,7 +210,40 @@ export function ConfiguracoesClient({
     const { deleteTipoVacina } = await import("@/app/vacinas/actions");
     await deleteTipoVacina(id);
     setTiposVacina((prev) => prev.filter((v) => v.id !== id));
+    toast.success("Vacina excluída com sucesso.");
   }
+
+  const [isDoseUnica, setIsDoseUnica] = useState(false);
+
+  // When opening edit dialog, we need to set isDoseUnica
+  function handleEditVacina(vacina: TipoVacina) {
+    setEditingVacina(vacina);
+    setIsDoseUnica(vacina.dose_unica || false);
+    setMesesAplicacao(vacina.meses_aplicacao || []);
+    setVacinaDialogOpen(true);
+  }
+
+  function handleNewVacina() {
+    setEditingVacina(null);
+    setIsDoseUnica(false);
+    setMesesAplicacao([]);
+    setVacinaDialogOpen(true);
+  }
+
+  const meses = [
+    { num: 1, label: "Jan" },
+    { num: 2, label: "Fev" },
+    { num: 3, label: "Mar" },
+    { num: 4, label: "Abr" },
+    { num: 5, label: "Mai" },
+    { num: 6, label: "Jun" },
+    { num: 7, label: "Jul" },
+    { num: 8, label: "Ago" },
+    { num: 9, label: "Set" },
+    { num: 10, label: "Out" },
+    { num: 11, label: "Nov" },
+    { num: 12, label: "Dez" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -196,17 +280,30 @@ export function ConfiguracoesClient({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4">
+              <form onSubmit={handleSaveFazenda} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="nome_fazenda">Nome da Fazenda</Label>
+                  <Input
+                    id="nome_fazenda"
+                    value={configFazenda.nome}
+                    onChange={(e) =>
+                      setConfigFazenda((prev) => ({
+                        ...prev,
+                        nome: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="nome_fazenda">Nome da Fazenda</Label>
+                    <Label htmlFor="cnpj">CNPJ / CPF</Label>
                     <Input
-                      id="nome_fazenda"
-                      value={configFazenda.nome}
+                      id="cnpj"
+                      value={configFazenda.cnpj}
                       onChange={(e) =>
                         setConfigFazenda((prev) => ({
                           ...prev,
-                          nome: e.target.value,
+                          cnpj: e.target.value,
                         }))
                       }
                     />
@@ -301,9 +398,9 @@ export function ConfiguracoesClient({
                     </select>
                   </div>
                 </div>
-                <Button type="button">
+                <Button type="submit" disabled={isSavingFazenda}>
                   <Save className="mr-2 h-4 w-4" />
-                  Salvar Alterações
+                  {isSavingFazenda ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </form>
             </CardContent>
@@ -391,12 +488,7 @@ export function ConfiguracoesClient({
                   Configure as vacinas e seus intervalos de aplicação
                 </CardDescription>
               </div>
-              <Button
-                onClick={() => {
-                  setEditingVacina(null);
-                  setVacinaDialogOpen(true);
-                }}
-              >
+              <Button onClick={handleNewVacina}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Vacina
               </Button>
@@ -418,10 +510,15 @@ export function ConfiguracoesClient({
                       <TableCell className="font-medium">
                         {vacina.nome}
                       </TableCell>
-                      <TableCell>{vacina.doses_por_ano}x</TableCell>
-                      <TableCell>{vacina.dias_entre_doses} dias</TableCell>
+                      <TableCell>{vacina.dose_unica ? "Única" : `${vacina.doses_por_ano}x`}</TableCell>
+                      <TableCell>{vacina.dose_unica ? "-" : `${vacina.dias_entre_doses} dias`}</TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
+                          {vacina.dose_unica && (
+                            <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                              Dose Única
+                            </Badge>
+                          )}
                           {vacina.obrigatoria && (
                             <Badge variant="default" className="text-xs">
                               Obrigatória
@@ -439,10 +536,7 @@ export function ConfiguracoesClient({
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              setEditingVacina(vacina);
-                              setVacinaDialogOpen(true);
-                            }}
+                            onClick={() => handleEditVacina(vacina)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -638,30 +732,43 @@ export function ConfiguracoesClient({
                 rows={2}
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="doses_por_ano">Doses por Ano</Label>
-                <Input
-                  id="doses_por_ano"
-                  name="doses_por_ano"
-                  type="number"
-                  min="1"
-                  defaultValue={editingVacina?.doses_por_ano || 1}
-                  required
+            <div className="space-y-3 pt-2 pb-2">
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="dose_unica"
+                  name="dose_unica"
+                  checked={isDoseUnica}
+                  onCheckedChange={setIsDoseUnica}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dias_entre_doses">Dias entre Doses</Label>
-                <Input
-                  id="dias_entre_doses"
-                  name="dias_entre_doses"
-                  type="number"
-                  min="1"
-                  defaultValue={editingVacina?.dias_entre_doses || 365}
-                  required
-                />
+                <Label htmlFor="dose_unica">Dose única na vida (ex: Brucelose)</Label>
               </div>
             </div>
+            {!isDoseUnica && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="doses_por_ano">Doses por Ano</Label>
+                  <Input
+                    id="doses_por_ano"
+                    name="doses_por_ano"
+                    type="number"
+                    min="1"
+                    defaultValue={editingVacina?.doses_por_ano || 1}
+                    required={!isDoseUnica}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dias_entre_doses">Dias entre Doses</Label>
+                  <Input
+                    id="dias_entre_doses"
+                    name="dias_entre_doses"
+                    type="number"
+                    min="1"
+                    defaultValue={editingVacina?.dias_entre_doses || 365}
+                    required={!isDoseUnica}
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Switch
@@ -680,6 +787,39 @@ export function ConfiguracoesClient({
                 <Label htmlFor="apenas_femeas">Aplicar Apenas em Fêmeas</Label>
               </div>
             </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <Label>Meses de Aplicação na Fazenda (Planejamento)</Label>
+              <div className="grid grid-cols-6 gap-2 sm:grid-cols-12 mt-2">
+                {meses.map((m) => {
+                  const isSelected = mesesAplicacao.includes(m.num);
+                  return (
+                    <button
+                      key={m.num}
+                      type="button"
+                      onClick={() => {
+                        setMesesAplicacao((prev) =>
+                          prev.includes(m.num)
+                            ? prev.filter((x) => x !== m.num)
+                            : [...prev, m.num]
+                        );
+                      }}
+                      className={`px-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        isSelected
+                          ? "bg-green-600 text-white shadow-sm"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Selecione os meses em que o rebanho deve receber esta vacina.
+              </p>
+            </div>
+
             <DialogFooter>
               <Button
                 type="button"

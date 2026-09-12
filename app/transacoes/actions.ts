@@ -73,6 +73,26 @@ export async function updateTransacao(id: string, data: any) {
 }
 
 export async function deleteTransacao(id: string) {
+  const transacao = await prisma.transacao.findUnique({
+    where: { id },
+    include: { animais: true }
+  });
+
+  if (transacao && transacao.animais.length > 0) {
+    const animaisIds = transacao.animais.map(a => a.id);
+    if (transacao.tipo === "compra") {
+      await prisma.animal.updateMany({
+        where: { id: { in: animaisIds } },
+        data: { comprador_id: null }
+      });
+    } else if (transacao.tipo === "venda") {
+      await prisma.animal.updateMany({
+        where: { id: { in: animaisIds } },
+        data: { status: "ATIVO", vendedor_id: null }
+      });
+    }
+  }
+
   await transacaoService.deleteTransacao(id);
   revalidatePath("/compras");
   revalidatePath("/vendas");

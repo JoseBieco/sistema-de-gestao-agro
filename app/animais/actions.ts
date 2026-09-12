@@ -34,3 +34,32 @@ export async function deleteAnimal(id: string) {
   await animalService.deleteAnimal(id);
   revalidatePath("/animais");
 }
+
+export async function addAnimalWeight(payload: {
+  animal_id: string;
+  peso: number;
+  data_pesagem: string;
+  observacoes: string;
+}) {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.historicoPesagem.create({
+      data: {
+        animal_id: payload.animal_id,
+        peso: payload.peso,
+        data_pesagem: new Date(payload.data_pesagem),
+        observacoes: payload.observacoes,
+      },
+    });
+
+    await tx.animal.update({
+      where: { id: payload.animal_id },
+      data: { peso_atual: payload.peso },
+    });
+  });
+
+  revalidatePath(`/animais/${payload.animal_id}`);
+  revalidatePath("/animais");
+  return { success: true };
+}

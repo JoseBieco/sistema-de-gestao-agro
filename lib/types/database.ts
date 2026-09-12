@@ -65,10 +65,13 @@ export interface TipoVacina {
   id: string;
   nome: string;
   descricao?: string;
+  carencia_dias?: number | null;
   doses_por_ano: number;
   dias_entre_doses: number;
   obrigatoria: boolean;
   apenas_femeas: boolean;
+  dose_unica: boolean;
+  meses_aplicacao: number[];
   created_at: string;
   updated_at: string;
 }

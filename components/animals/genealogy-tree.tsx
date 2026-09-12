@@ -5,7 +5,7 @@ import { User, ArrowDown, Dna } from "lucide-react";
 import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 import Link from "next/link";
 
-// 1. Tipagem Forte e Exportada
+// Tipagem Forte e Exportada
 export interface FamilyMember {
   id: string;
   numero_brinco: string;

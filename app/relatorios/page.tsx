@@ -3,10 +3,19 @@ import { AppShell } from "@/components/layout/app-shell";
 import { RelatoriosClient } from "@/components/reports/relatorios-client";
 import { CotacoesBIClient } from "@/components/reports/cotacoes-bi";
 
+import { obterCotacoesInteligentes } from "@/app/cotacoes/actions";
+
 export default async function RelatoriosPage() {
   const currentYear = new Date().getFullYear();
   const startOfYear = new Date(`${currentYear}-01-01`);
   const endOfYear = new Date(`${currentYear}-12-31T23:59:59.999Z`);
+
+  // Auto-fetch/cache today's quotes from AgroDoc AI API before loading history
+  await Promise.allSettled([
+    obterCotacoesInteligentes("boi_gordo", "SP"),
+    obterCotacoesInteligentes("milho", "SP"),
+    obterCotacoesInteligentes("soja", "SP"),
+  ]);
 
   const [animais, transacoes, vacinas, parcelas, cotacoes] = await Promise.all([
     prisma.animal.findMany({ include: { raca: true } }),
@@ -30,6 +39,7 @@ export default async function RelatoriosPage() {
     }),
     prisma.cotacaoHistorica.findMany({
       orderBy: { data: "desc" },
+      take: 100
     }),
   ]);
 

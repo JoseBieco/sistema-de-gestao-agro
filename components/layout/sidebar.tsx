@@ -55,8 +55,8 @@ const navigation: NavGroup[] = [
   {
     title: "Sanitário",
     items: [
+      { title: "Calendário", href: "/calendario", icon: Calendar },
       { title: "Vacinas", href: "/vacinas", icon: Syringe },
-      { title: "Agenda", href: "/agenda", icon: Calendar },
     ],
   },
   {

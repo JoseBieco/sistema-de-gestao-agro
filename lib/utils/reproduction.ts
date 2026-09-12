@@ -17,7 +17,7 @@ export function calcularPrevisoes(dados: {
     status_sugerido: "vazia" as string,
   };
 
-  // 1. Se foi coberta, calculamos o parto
+  // Se foi coberta, calculamos o parto
   if (dados.data_cobertura) {
     const dataCob = parseISO(dados.data_cobertura);
     resultado.data_prevista_parto = addDays(dataCob, GESTACAO_MEDIA_DIAS);
@@ -28,14 +28,14 @@ export function calcularPrevisoes(dados: {
     resultado.data_prevista_cio = addDays(dataCob, CICLO_ESTRAL_DIAS);
   }
 
-  // 2. Se não foi coberta, mas teve cio recente
+  // Se não foi coberta, mas teve cio recente
   else if (dados.data_ultimo_cio) {
     const dataCio = parseISO(dados.data_ultimo_cio);
     resultado.data_prevista_cio = addDays(dataCio, CICLO_ESTRAL_DIAS);
     resultado.status_sugerido = "vazia";
   }
 
-  // 3. Se acabou de parir (está em anestro pós-parto)
+  // Se acabou de parir (está em anestro pós-parto)
   else if (dados.data_ultimo_parto) {
     const dataParto = parseISO(dados.data_ultimo_parto);
     // Estima retorno ao cio

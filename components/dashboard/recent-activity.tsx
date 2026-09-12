@@ -2,45 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { formatDate } from "@/lib/utils/format"
 import { Beef, Syringe, DollarSign, ShoppingCart } from "lucide-react"
+import { prisma } from "@/lib/prisma"
 
 interface Activity {
   id: string
   type: "animal" | "vacina" | "compra" | "venda"
   title: string
   description: string
-  date: string
+  date: Date
 }
-
-const activities: Activity[] = [
-  {
-    id: "1",
-    type: "animal",
-    title: "Novo animal cadastrado",
-    description: "Bezerro #B-2024-042 registrado",
-    date: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    type: "vacina",
-    title: "Vacina aplicada",
-    description: "Aftosa em 15 animais",
-    date: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "3",
-    type: "compra",
-    title: "Nova compra registrada",
-    description: "30 bezerros de João Silva",
-    date: new Date(Date.now() - 172800000).toISOString(),
-  },
-  {
-    id: "4",
-    type: "venda",
-    title: "Venda finalizada",
-    description: "20 garrotes vendidos",
-    date: new Date(Date.now() - 259200000).toISOString(),
-  },
-]
 
 const iconMap = {
   animal: Beef,
@@ -56,7 +26,55 @@ const colorMap = {
   venda: "bg-primary/10 text-primary",
 }
 
-export function RecentActivity() {
+export async function RecentActivity() {
+  const [animais, transacoes, vacinas] = await Promise.all([
+    prisma.animal.findMany({ orderBy: { created_at: "desc" }, take: 4 }),
+    prisma.transacao.findMany({ orderBy: { data_negociacao: "desc" }, take: 4 }),
+    prisma.agendaVacina.findMany({ 
+      where: { status: "concluida" }, 
+      orderBy: { data_aplicacao: "desc" }, 
+      take: 4,
+      include: { animal: true, tipo_vacina: true }
+    })
+  ]);
+
+  const activities: Activity[] = [];
+
+  animais.forEach(a => {
+    activities.push({
+      id: `an_${a.id}`,
+      type: "animal",
+      title: "Novo animal cadastrado",
+      description: `Brinco ${a.brinco || a.nome}`,
+      date: a.created_at
+    });
+  });
+
+  transacoes.forEach(t => {
+    activities.push({
+      id: `tr_${t.id}`,
+      type: t.tipo as "compra" | "venda",
+      title: t.tipo === "compra" ? "Nova compra registrada" : "Venda finalizada",
+      description: `Valor: R$ ${t.valor_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+      date: t.data_negociacao
+    });
+  });
+
+  vacinas.forEach(v => {
+    if (v.data_aplicacao) {
+      activities.push({
+        id: `vc_${v.id}`,
+        type: "vacina",
+        title: "Vacina aplicada",
+        description: `${v.tipo_vacina.nome} em ${v.animal.brinco || v.animal.nome}`,
+        date: v.data_aplicacao
+      });
+    }
+  });
+
+  activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+  const recentActivities = activities.slice(0, 8);
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -65,7 +83,7 @@ export function RecentActivity() {
       <CardContent className="p-0">
         <ScrollArea className="h-[320px]">
           <div className="space-y-1 px-6 pb-6">
-            {activities.map((activity) => {
+            {recentActivities.map((activity) => {
               const Icon = iconMap[activity.type]
               return (
                 <div
@@ -79,10 +97,13 @@ export function RecentActivity() {
                     <p className="text-sm font-medium leading-none">{activity.title}</p>
                     <p className="text-sm text-muted-foreground">{activity.description}</p>
                   </div>
-                  <time className="text-xs text-muted-foreground">{formatDate(activity.date)}</time>
+                  <time className="text-xs text-muted-foreground">{formatDate(activity.date.toISOString())}</time>
                 </div>
               )
             })}
+            {recentActivities.length === 0 && (
+              <p className="text-sm text-center text-muted-foreground mt-4">Nenhuma atividade recente.</p>
+            )}
           </div>
         </ScrollArea>
       </CardContent>

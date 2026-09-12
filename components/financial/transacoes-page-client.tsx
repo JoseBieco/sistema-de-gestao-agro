@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils/format"
 import { Plus, ShoppingCart, TrendingUp, Eye } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { Transacao, TipoTransacao, Parceiro, Parcela } from "@/lib/types/database"
 
 type TransacaoExtended = Transacao & {
@@ -100,6 +101,7 @@ export function TransacoesPageClient({ tipo, initialTransacoes }: TransacoesPage
           </Link>
         </CardHeader>
         <CardContent>
+          {transacoes.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -113,8 +115,7 @@ export function TransacoesPageClient({ tipo, initialTransacoes }: TransacoesPage
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transacoes.length > 0 ? (
-                transacoes.map((t) => {
+                {transacoes.map((t) => {
                   const parcelasPagas = t.parcelas?.filter((p) => p.status === "pago").length || 0
                   const totalParcelas = t.parcelas?.length || 0
 
@@ -143,16 +144,18 @@ export function TransacoesPageClient({ tipo, initialTransacoes }: TransacoesPage
                       </TableCell>
                     </TableRow>
                   )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Nenhuma {isCompra ? "compra" : "venda"} registrada
-                  </TableCell>
-                </TableRow>
-              )}
+                })}
             </TableBody>
           </Table>
+          ) : (
+            <EmptyState
+              icon={Icon}
+              title={`Nenhuma ${isCompra ? "compra" : "venda"} registrada`}
+              description={`Você ainda não registrou nenhuma transação de ${tipo}. Clique abaixo para começar.`}
+              actionLabel={`Nova ${isCompra ? "Compra" : "Venda"}`}
+              onAction={() => window.location.href = isCompra ? "/compras/nova" : "/vendas/nova"}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

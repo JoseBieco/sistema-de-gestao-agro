@@ -6,15 +6,18 @@ import { revalidatePath } from "next/cache";
 const cicloService = new CicloReprodutivoService();
 
 export async function getCiclos() {
-  return await cicloService.getAll();
+  return await cicloService.getAtivos();
 }
 
 export async function createCiclo(data: any) {
   const result = await cicloService.create({
     ...data,
-    data_inseminacao: data.data_inseminacao ? new Date(data.data_inseminacao) : null,
-    previsao_parto: data.previsao_parto ? new Date(data.previsao_parto) : null,
-    data_parto: data.data_parto ? new Date(data.data_parto) : null,
+    data_ultimo_parto: data.data_ultimo_parto ? new Date(data.data_ultimo_parto) : null,
+    data_ultimo_cio: data.data_ultimo_cio ? new Date(data.data_ultimo_cio) : null,
+    data_cobertura: data.data_cobertura ? new Date(data.data_cobertura) : null,
+    data_prevista_parto: data.data_prevista_parto ? new Date(data.data_prevista_parto) : null,
+    data_prevista_cio: data.data_prevista_cio ? new Date(data.data_prevista_cio) : null,
+    data_diagnostico_gestacao: data.data_diagnostico_gestacao ? new Date(data.data_diagnostico_gestacao) : null,
   });
   revalidatePath("/reproducao");
   return result;
@@ -23,9 +26,12 @@ export async function createCiclo(data: any) {
 export async function updateCiclo(id: string, data: any) {
   const result = await cicloService.update(id, {
     ...data,
-    data_inseminacao: data.data_inseminacao ? new Date(data.data_inseminacao) : undefined,
-    previsao_parto: data.previsao_parto ? new Date(data.previsao_parto) : undefined,
-    data_parto: data.data_parto ? new Date(data.data_parto) : undefined,
+    data_ultimo_parto: data.data_ultimo_parto ? new Date(data.data_ultimo_parto) : undefined,
+    data_ultimo_cio: data.data_ultimo_cio ? new Date(data.data_ultimo_cio) : undefined,
+    data_cobertura: data.data_cobertura ? new Date(data.data_cobertura) : undefined,
+    data_prevista_parto: data.data_prevista_parto ? new Date(data.data_prevista_parto) : undefined,
+    data_prevista_cio: data.data_prevista_cio ? new Date(data.data_prevista_cio) : undefined,
+    data_diagnostico_gestacao: data.data_diagnostico_gestacao ? new Date(data.data_diagnostico_gestacao) : undefined,
   });
   revalidatePath("/reproducao");
   return result;

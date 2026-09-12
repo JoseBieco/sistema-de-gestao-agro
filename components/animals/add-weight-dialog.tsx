@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +32,6 @@ export function AddWeightDialog({
   onSuccess,
 }: AddWeightDialogProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     peso: "",
@@ -49,40 +47,27 @@ export function AddWeightDialog({
     const novoPeso = parseFloat(formData.peso);
 
     try {
-      // 1. Inserir no histórico
-      const { error: historyError } = await supabase
-        .from("historico_pesagem")
-        .insert({
-          animal_id: animalId,
-          peso: novoPeso,
-          data_pesagem: formData.data_pesagem,
-          observacoes: formData.observacoes,
-        });
+      const { addAnimalWeight } = await import("@/app/animais/actions");
+      await addAnimalWeight({
+        animal_id: animalId,
+        peso: novoPeso,
+        data_pesagem: formData.data_pesagem,
+        observacoes: formData.observacoes,
+      });
 
-      if (historyError) throw historyError;
-
-      // 2. Atualizar peso atual do animal se a data for recente ou igual a hoje
-      // Lógica simples: sempre atualiza o peso atual para o último inserido
-      const { error: updateError } = await supabase
-        .from("animais")
-        .update({ peso_atual: novoPeso })
-        .eq("id", animalId);
-
-      if (updateError) throw updateError;
-
+      toast.success("Peso registrado com sucesso!");
+      onSuccess?.();
+      onOpenChange(false);
+      
+      // Reset form
       setFormData({
         peso: "",
         data_pesagem: new Date().toISOString().split("T")[0],
         observacoes: "",
       });
-
-      onSuccess?.();
-      onOpenChange(false);
-      router.refresh();
-      toast.success("Sucesso ao salvar pesagem.");
     } catch (error) {
-      toast.error("Erro ao salvar pesagem: " + error);
-      console.error("Erro ao salvar pesagem:", error);
+      toast.error("Erro ao registrar peso");
+      console.error(error);
     } finally {
       setLoading(false);
     }

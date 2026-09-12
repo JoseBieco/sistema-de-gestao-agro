@@ -1,13 +1,13 @@
 import { AppShell } from "@/components/layout/app-shell"
-import { VacinasPageClient } from "./page-client"
-import { getTiposVacina } from "./actions"
+import { AgendaPageClient } from "./page-client"
+import { getAgendas } from "@/app/vacinas/actions"
 
-export default async function VacinasPage() {
-  const tiposVacina = await getTiposVacina()
+export default async function AgendaPage() {
+  const agendaVacinas = await getAgendas()
 
   return (
-    <AppShell title="Tipos de Vacina">
-      <VacinasPageClient initialTipos={tiposVacina || []} />
+    <AppShell title="Vacinas (Aplicadas e Agendadas)">
+      <AgendaPageClient initialAgenda={agendaVacinas || []} />
     </AppShell>
   )
 }

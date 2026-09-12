@@ -48,6 +48,7 @@ import {
   AlertCircle,
   Eye,
   Edit,
+  Trash2,
 } from "lucide-react";
 import type {
   TipoTransacao,
@@ -57,6 +58,9 @@ import type {
   Animal,
   Raca,
 } from "@/lib/types/database";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { updateTransacao, deleteTransacao } from "@/app/transacoes/actions";
 
 interface TransacaoExtended {
   id: string;
@@ -69,6 +73,7 @@ interface TransacaoExtended {
   gta_url?: string;
   observacoes?: string;
   status: string;
+  parceiro_id?: string;
   parceiro?: Parceiro;
   itens?: ItemTransacao[];
   parcelas?: Parcela[];
@@ -84,10 +89,21 @@ export function TransacaoDetailClient({
   transacao,
   tipo,
 }: TransacaoDetailClientProps) {
+  const router = useRouter();
   const [parcelas, setParcelas] = useState(transacao.parcelas || []);
   const [selectedParcela, setSelectedParcela] = useState<Parcela | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const [editTransacaoOpen, setEditTransacaoOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    data_negociacao: transacao.data_negociacao.split("T")[0],
+    forma_pagamento: transacao.forma_pagamento || "",
+    status: transacao.status || "pendente",
+    observacoes: transacao.observacoes || "",
+    nota_fiscal_url: transacao.nota_fiscal_url || "",
+    gta_url: transacao.gta_url || ""
+  });
 
   const isCompra = tipo === "compra";
   const Icon = isCompra ? ShoppingCart : TrendingUp;
@@ -130,6 +146,34 @@ export function TransacaoDetailClient({
     setLoading(false);
   }
 
+  async function handleUpdateTransacao() {
+    setLoading(true);
+    try {
+      await updateTransacao(transacao.id, {
+        ...editForm,
+        data_negociacao: new Date(editForm.data_negociacao)
+      });
+      toast.success("Transação atualizada com sucesso!");
+      setEditTransacaoOpen(false);
+      router.refresh();
+    } catch (error) {
+      toast.error("Erro ao atualizar transação.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeleteTransacao() {
+    if (!confirm("Tem certeza que deseja EXCLUIR esta transação? Isso removerá as parcelas e reverterá o vínculo dos animais.")) return;
+    try {
+      await deleteTransacao(transacao.id);
+      toast.success("Transação excluída.");
+      router.push(isCompra ? "/compras" : "/vendas");
+    } catch (error) {
+      toast.error("Erro ao excluir transação.");
+    }
+  }
+
   function getParcelaStatusIcon(status: string) {
     switch (status) {
       case "pago":
@@ -170,6 +214,17 @@ export function TransacaoDetailClient({
               Registrada em {formatDate(transacao.data_negociacao)}
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setEditTransacaoOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar
+          </Button>
+          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={handleDeleteTransacao}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir
+          </Button>
         </div>
       </div>
 
@@ -677,6 +732,83 @@ export function TransacaoDetailClient({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog Editar Transacao */}
+      <Dialog open={editTransacaoOpen} onOpenChange={setEditTransacaoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Transação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Data de Negociação</Label>
+                <Input
+                  type="date"
+                  value={editForm.data_negociacao}
+                  onChange={(e) => setEditForm({ ...editForm, data_negociacao: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <select
+                  value={editForm.forma_pagamento}
+                  onChange={(e) => setEditForm({ ...editForm, forma_pagamento: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="pix">PIX</option>
+                  <option value="dinheiro">Dinheiro</option>
+                  <option value="permuta">Permuta</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="boleto">Boleto</option>
+                  <option value="promissoria">Promissória</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="pendente">Pendente</option>
+                  <option value="finalizada">Finalizada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Link Nota Fiscal</Label>
+              <Input
+                value={editForm.nota_fiscal_url}
+                onChange={(e) => setEditForm({ ...editForm, nota_fiscal_url: e.target.value })}
+                placeholder="https://"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Link GTA</Label>
+              <Input
+                value={editForm.gta_url}
+                onChange={(e) => setEditForm({ ...editForm, gta_url: e.target.value })}
+                placeholder="https://"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                value={editForm.observacoes}
+                onChange={(e) => setEditForm({ ...editForm, observacoes: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTransacaoOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateTransacao} disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -9,6 +9,9 @@ import { PastureCard } from "./pasture-card";
 import { MoveAnimalsDialog } from "./move-animals-dialog";
 import { NewPastureDialog } from "./new-pasture-dialog";
 import type { Local, Animal } from "@/lib/types/database";
+import { deleteLocal } from "@/app/locais/actions";
+import { toast } from "sonner";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface ManagementClientProps {
   locais: Local[];
@@ -21,6 +24,7 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [newPastureOpen, setNewPastureOpen] = useState(false);
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
+  const [localToEdit, setLocalToEdit] = useState<Local | null>(null);
 
   // Calcular ocupação
   const occupancyMap = animais.reduce((acc, animal) => {
@@ -45,6 +49,29 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
     setMoveDialogOpen(true);
   };
 
+  const handleEditLocal = (local: Local) => {
+    setLocalToEdit(local);
+    setNewPastureOpen(true);
+  };
+
+  const handleDeleteLocal = async (local: Local) => {
+    const qty = occupancyMap[local.id] || 0;
+    if (qty > 0) {
+      toast.error(`Não é possível excluir o local "${local.nome}" pois ele possui ${qty} animais.`);
+      return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir o local "${local.nome}"?`)) return;
+
+    try {
+      await deleteLocal(local.id);
+      toast.success("Local excluído com sucesso.");
+      handleRefresh();
+    } catch (e) {
+      toast.error("Erro ao excluir local.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Ações */}
@@ -63,7 +90,7 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
             <ArrowLeftRight className="mr-2 h-4 w-4" />
             Movimentar
           </Button>
-          <Button onClick={() => setNewPastureOpen(true)}>
+          <Button onClick={() => { setLocalToEdit(null); setNewPastureOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Local
           </Button>
@@ -106,14 +133,20 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
             local={local}
             currentOccupancy={occupancyMap[local.id] || 0}
             onClick={() => openMoveDialog(local.id)}
+            onEdit={handleEditLocal}
+            onDelete={handleDeleteLocal}
           />
         ))}
       </div>
 
       {filteredLocais.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          Nenhum local encontrado. Crie seu primeiro pasto ou curral.
-        </div>
+        <EmptyState
+          icon={Map}
+          title="Nenhum local cadastrado"
+          description="Crie seu primeiro pasto ou curral para começar a alocar seus animais."
+          actionLabel="Novo Local"
+          onAction={() => { setLocalToEdit(null); setNewPastureOpen(true); }}
+        />
       )}
 
       {/* Dialogs */}
@@ -130,6 +163,7 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
         open={newPastureOpen}
         onOpenChange={setNewPastureOpen}
         onSuccess={handleRefresh}
+        localToEdit={localToEdit}
       />
     </div>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +39,6 @@ export function VaccineApplicationDialog({
   onSuccess,
   preSelectedAnimals = [],
 }: VaccineApplicationDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [tiposVacina, setTiposVacina] = useState<TipoVacina[]>([]);
   const [animais, setAnimais] = useState<Animal[]>([]);
@@ -60,16 +58,19 @@ export function VaccineApplicationDialog({
   }, [open]);
 
   async function loadData() {
+    const { getTiposVacina } = await import("@/app/vacinas/actions");
+    const { getAnimais } = await import("@/app/animais/actions");
+    
     const [vacRes, animaisRes] = await Promise.all([
-      supabase.from("tipos_vacina").select("*").order("nome"),
-      supabase
-        .from("animais")
-        .select("id, numero_brinco, nome, genero")
-        .eq("status", "ativo"),
+      getTiposVacina(),
+      getAnimais()
     ]);
 
-    if (vacRes.data) setTiposVacina(vacRes.data);
-    if (animaisRes.data) setAnimais(animaisRes.data);
+    if (vacRes) setTiposVacina(vacRes);
+    if (animaisRes) {
+      // Filtra apenas ativos
+      setAnimais(animaisRes.filter((a: any) => a.status === "ativo"));
+    }
   }
 
   async function handleSubmit() {
@@ -77,59 +78,14 @@ export function VaccineApplicationDialog({
     setLoading(true);
 
     try {
-      // Get vaccine type info
-      const tipoVacina = tiposVacina.find(
-        (t) => t.id === formData.tipo_vacina_id
-      );
-      if (!tipoVacina) throw new Error("Tipo de vacina não encontrado");
-
-      // Lógica de Data: Verifica se é um agendamento futuro
-      const hoje = new Date().toISOString().split("T")[0];
-      const isFuturo = formData.data_aplicacao > hoje;
-
-      // Se for futuro, o status é 'pendente' e não tem data de aplicação efetiva ainda
-      const statusInicial = isFuturo ? "pendente" : "aplicada";
-      const dataAplicacaoEfetiva = isFuturo ? null : formData.data_aplicacao;
-
-      // Create vaccine records for each animal
-      for (const animalId of selectedAnimals) {
-        // Create the applied vaccine record
-        const { data: vacinaAplicada, error: insertError } = await supabase
-          .from("agenda_vacinas")
-          .insert({
-            animal_id: animalId,
-            tipo_vacina_id: formData.tipo_vacina_id,
-            data_prevista: formData.data_aplicacao, // Data agendada/prevista
-            data_aplicacao: dataAplicacaoEfetiva, // Data real (null se futuro)
-            status: statusInicial, // Dinâmico (pendente/aplicada)
-            dose_numero: 1,
-            observacoes: formData.observacoes,
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        // If vaccine requires multiple doses, create the next pending dose
-        if (tipoVacina.doses_por_ano > 1 && tipoVacina.dias_entre_doses > 0) {
-          // Calcula próxima data baseada na data PREVISTA da primeira dose
-          const nextDate = new Date(formData.data_aplicacao);
-          nextDate.setDate(nextDate.getDate() + tipoVacina.dias_entre_doses);
-
-          const { error: nextError } = await supabase
-            .from("agenda_vacinas")
-            .insert({
-              animal_id: animalId,
-              tipo_vacina_id: formData.tipo_vacina_id,
-              data_prevista: nextDate.toISOString().split("T")[0],
-              status: "pendente",
-              dose_numero: 2,
-              vacina_pai_id: vacinaAplicada.id,
-            });
-
-          if (nextError) throw nextError;
-        }
-      }
+      const { applyVacinasEmLote } = await import("@/app/vacinas/actions");
+      
+      await applyVacinasEmLote({
+        animais_ids: selectedAnimals,
+        tipo_vacina_id: formData.tipo_vacina_id,
+        data_aplicacao: formData.data_aplicacao,
+        observacoes: formData.observacoes,
+      });
 
       onSuccess();
       onOpenChange(false);
@@ -141,7 +97,7 @@ export function VaccineApplicationDialog({
       });
       toast.success("Sucesso ao adicionar a vacina.");
     } catch (error) {
-      toast.error("Erro ao registrar vacinas:" + error);
+      toast.error("Erro ao registrar vacinas: " + error);
       console.error("Erro ao registrar vacinas:", error);
     } finally {
       setLoading(false);

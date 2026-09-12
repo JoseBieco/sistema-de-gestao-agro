@@ -4,10 +4,21 @@ export class CicloReprodutivoRepository {
   async findAll() {
     return prisma.cicloReprodutivo.findMany({
       include: {
-        femea: true,
-        reprodutor: true
+        animal: true,
+        touro: true
       },
-      orderBy: { data_inseminacao: "desc" }
+      orderBy: { created_at: "desc" }
+    });
+  }
+
+  async findAtivos() {
+    return prisma.cicloReprodutivo.findMany({
+      where: { ativo: true },
+      include: {
+        animal: true,
+        touro: true
+      },
+      orderBy: { data_prevista_cio: "asc" }
     });
   }
 
@@ -15,8 +26,8 @@ export class CicloReprodutivoRepository {
     return prisma.cicloReprodutivo.findUnique({
       where: { id },
       include: {
-        femea: true,
-        reprodutor: true
+        animal: true,
+        touro: true
       }
     });
   }
@@ -31,6 +42,13 @@ export class CicloReprodutivoRepository {
     return prisma.cicloReprodutivo.update({
       where: { id },
       data
+    });
+  }
+
+  async inativarCiclosAntigos(animal_id: string) {
+    return prisma.cicloReprodutivo.updateMany({
+      where: { animal_id, ativo: true },
+      data: { ativo: false }
     });
   }
 

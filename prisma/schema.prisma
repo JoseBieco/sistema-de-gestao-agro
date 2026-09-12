@@ -115,11 +115,17 @@ model Animal {
 }
 
 model TipoVacina {
-  id         String    @id @default(uuid())
-  nome       String
-  descricao  String?
-  carencia_dias Int?
-  created_at DateTime  @default(now())
+  id               String   @id @default(uuid())
+  nome             String
+  descricao        String?
+  carencia_dias    Int?
+  doses_por_ano    Int      @default(1)
+  dias_entre_doses Int      @default(365)
+  obrigatoria      Boolean  @default(false)
+  apenas_femeas    Boolean  @default(false)
+  dose_unica       Boolean  @default(false)
+  meses_aplicacao  Int[]
+  created_at       DateTime @default(now())
 
   agendas    AgendaVacina[]
 
@@ -144,17 +150,22 @@ model AgendaVacina {
 
 model CicloReprodutivo {
   id             String    @id @default(uuid())
-  femea_id       String
-  reprodutor_id  String?
-  data_inseminacao DateTime?
-  previsao_parto DateTime?
-  data_parto     DateTime?
-  status         String    @default("EM_ANDAMENTO") // EM_ANDAMENTO, CONCLUIDO, FALHA
-  observacao     String?
+  animal_id      String
+  data_ultimo_parto DateTime?
+  data_ultimo_cio   DateTime?
+  data_cobertura    DateTime?
+  tipo_cobertura    String    @default("monta_natural") // monta_natural, inseminacao
+  touro_id          String?
+  data_prevista_parto DateTime?
+  data_prevista_cio DateTime?
+  data_diagnostico_gestacao DateTime?
+  status         String    @default("vazia") // vazia, prenha, lactacao, aguardando_diagnostico
+  observacoes    String?
+  ativo          Boolean   @default(true)
   created_at     DateTime  @default(now())
 
-  femea          Animal    @relation("FemeaCiclo", fields: [femea_id], references: [id])
-  reprodutor     Animal?   @relation("ReprodutorCiclo", fields: [reprodutor_id], references: [id])
+  animal         Animal    @relation("FemeaCiclo", fields: [animal_id], references: [id])
+  touro          Animal?   @relation("ReprodutorCiclo", fields: [touro_id], references: [id])
 
   @@map("ciclos_reprodutivos")
 }
@@ -210,12 +221,28 @@ model HistoricoPesagem {
 }
 
 model CotacaoHistorica {
-  id         String    @id @default(uuid())
-  data       DateTime
-  produto    String    // ARROBA_BOI, MILHO, SOJA
-  valor      Float
-  estado     String?
-  created_at DateTime  @default(now())
+  id              String    @id @default(uuid())
+  data            DateTime
+  produto         String    // boi_gordo, milho, soja
+  valor           Float
+  estado          String?
+  unidade_medida  String?   // ex: "@", "kg", "sc"
+  fonte           String?   // ex: "AgroDoc AI"
+  data_coleta     DateTime? @default(now())
+  created_at      DateTime  @default(now())
 
   @@map("cotacoes_historicas")
+}
+model Fazenda {
+  id         String   @id @default(uuid())
+  nome       String
+  cnpj       String?
+  ie         String?
+  endereco   String?
+  cidade     String?
+  estado     String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("fazendas")
 }

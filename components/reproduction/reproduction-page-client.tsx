@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReproductionFormDialog } from "./reproduction-form-dialog";
 import { Plus, Heart, Baby, CalendarClock, Edit } from "lucide-react"; // Import Edit
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/utils/format";
 import { differenceInDays, parseISO } from "date-fns";
 import type { Animal, CicloReprodutivo } from "@/lib/types/database";
@@ -25,7 +25,6 @@ export function ReproductionPageClient({
   touros,
 }: ReproductionPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [ciclos, setCiclos] = useState(initialCiclos);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -39,19 +38,10 @@ export function ReproductionPageClient({
   }, [initialCiclos]);
 
   async function refreshData() {
-    const { data } = await supabase
-      .from("ciclos_reprodutivos")
-      .select(
-        `
-        *,
-        animal:animais!animal_id(id, nome, numero_brinco)
-      `
-      )
-      .eq("ativo", true)
-      .order("data_prevista_cio", { ascending: true });
-
+    const { getCiclos } = await import("@/app/reproducao/actions");
+    const data = await getCiclos();
     if (data) {
-      setCiclos(data);
+      setCiclos(data as any);
     }
     router.refresh();
   }
@@ -251,8 +241,14 @@ export function ReproductionPageClient({
               />
             ))}
             {prenhas.length === 0 && (
-              <div className="col-span-full text-center py-10 text-muted-foreground">
-                Nenhuma vaca gestante.
+              <div className="col-span-full">
+                <EmptyState
+                  icon={Baby}
+                  title="Nenhuma vaca gestante"
+                  description="Você não tem animais com prenhez confirmada no momento."
+                  actionLabel="Novo Ciclo"
+                  onAction={handleNew}
+                />
               </div>
             )}
           </div>
@@ -269,8 +265,14 @@ export function ReproductionPageClient({
               />
             ))}
             {vazias.length === 0 && (
-              <div className="col-span-full text-center py-10 text-muted-foreground">
-                Nenhum animal em ciclo.
+              <div className="col-span-full">
+                <EmptyState
+                  icon={CalendarClock}
+                  title="Nenhum animal em ciclo"
+                  description="Não há fêmeas vazias ou aguardando diagnóstico neste momento."
+                  actionLabel="Novo Ciclo"
+                  onAction={handleNew}
+                />
               </div>
             )}
           </div>

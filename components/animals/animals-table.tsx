@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { AnimalStatusDialog } from "./animal-status-dialog"
 import { calcularIdade, getStatusColor } from "@/lib/utils/format"
-import { MoreHorizontal, Eye, Edit, RefreshCw } from "lucide-react"
+import { MoreHorizontal, Eye, Edit, RefreshCw, Beef } from "lucide-react"
+import { EmptyState } from "@/components/ui/empty-state"
 import type { Animal } from "@/lib/types/database"
 
 interface AnimalsTableProps {
@@ -115,6 +116,20 @@ export function AnimalsTable({ animals, onRefresh }: AnimalsTableProps) {
       },
     },
   ]
+
+  if (animals.length === 0) {
+    return (
+      <div className="py-12">
+        <EmptyState
+          icon={Beef}
+          title="Nenhum animal cadastrado"
+          description="Comece a gerenciar seu rebanho registrando os animais."
+          actionLabel="Novo Animal"
+          onAction={() => window.location.href = "/animais/novo"}
+        />
+      </div>
+    )
+  }
 
   return (
     <>
