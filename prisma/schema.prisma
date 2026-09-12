@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Raca {
+  id         String    @id @default(uuid())
+  nome       String
+  descricao  String?
+  created_at DateTime  @default(now())
+  
+  animais    Animal[]
+
+  @@map("racas")
+}
+
+model Local {
+  id         String    @id @default(uuid())
+  nome       String
+  tipo       String    // pasto, piquete, curral, confinamento
+  area_hectares Float?
+  capacidade_maxima Int?
+  observacoes String?
+  created_at DateTime  @default(now())
+  
+  animais    Animal[]  @relation("LocalAnimais")
+  movimentos_origem  HistoricoMovimentacao[] @relation("LocalOrigem")
+  movimentos_destino HistoricoMovimentacao[] @relation("LocalDestino")
+
+  @@map("locais")
+}
+
+model Parcela {
+  id                      String    @id @default(uuid())
+  transacao_id            String
+  numero_parcela          Int
+  data_vencimento         DateTime
+  valor                   Float
+  status                  String    @default("pendente")
+  data_pagamento          DateTime?
+  data_baixa_promissoria  DateTime?
+  foto_promissoria_frente_url String?
+  foto_promissoria_verso_url  String?
+  observacoes             String?
+  created_at              DateTime  @default(now())
+
+  transacao               Transacao @relation(fields: [transacao_id], references: [id], onDelete: Cascade)
+
+  @@map("parcelas")
+}
+
+model Parceiro {
+  id         String    @id @default(uuid())
+  nome       String
+  cpf_cnpj   String?
+  telefone   String?
+  email      String?
+  tipo       String    // comprador, vendedor, ambos
+  endereco   String?
+  observacoes String?
+  ativo      Boolean   @default(true)
+  created_at DateTime  @default(now())
+
+  transacoes Transacao[]
+  compras    Animal[]  @relation("Comprador")
+  vendas     Animal[]  @relation("Vendedor")
+
+  @@map("parceiros")
+}
+
+model Animal {
+  id             String    @id @default(uuid())
+  brinco         String    @unique
+  nome           String?
+  raca_id        String
+  sexo           String
+  data_nascimento DateTime?
+  peso_nascimento Float?
+  peso_atual     Float?
+  status         String    @default("ATIVO") // ATIVO, VENDIDO, MORTO
+  local_id       String?
+  mae_id         String?
+  pai_id         String?
+  
+  // Controle financeiro
+  valor_compra   Float?
+  comprador_id   String?
+  vendedor_id    String?
+
+  observacoes    String?
+  created_at     DateTime  @default(now())
+
+  raca           Raca      @relation(fields: [raca_id], references: [id])
+  local          Local?    @relation("LocalAnimais", fields: [local_id], references: [id])
+  mae            Animal?   @relation("MaeFilhos", fields: [mae_id], references: [id])
+  pai            Animal?   @relation("PaiFilhos", fields: [pai_id], references: [id])
+  filhos_mae     Animal[]  @relation("MaeFilhos")
+  filhos_pai     Animal[]  @relation("PaiFilhos")
+  
+  comprador      Parceiro? @relation("Comprador", fields: [comprador_id], references: [id])
+  vendedor       Parceiro? @relation("Vendedor", fields: [vendedor_id], references: [id])
+
+  agenda_vacinas         AgendaVacina[]
+  transacoes             Transacao[]
+  historico_pesagem      HistoricoPesagem[]
+  historico_movimentacao HistoricoMovimentacao[]
+  ciclos_femea           CicloReprodutivo[] @relation("FemeaCiclo")
+  ciclos_reprodutor      CicloReprodutivo[] @relation("ReprodutorCiclo")
+
+  @@map("animais")
+}
+
+model TipoVacina {
+  id         String    @id @default(uuid())
+  nome       String
+  descricao  String?
+  carencia_dias Int?
+  created_at DateTime  @default(now())
+
+  agendas    AgendaVacina[]
+
+  @@map("tipos_vacina")
+}
+
+model AgendaVacina {
+  id             String    @id @default(uuid())
+  animal_id      String
+  tipo_vacina_id String
+  data_prevista  DateTime
+  data_aplicacao DateTime?
+  status         String    @default("PENDENTE") // PENDENTE, APLICADA, CANCELADA
+  observacao     String?
+  created_at     DateTime  @default(now())
+
+  animal         Animal     @relation(fields: [animal_id], references: [id])
+  tipo_vacina    TipoVacina @relation(fields: [tipo_vacina_id], references: [id])
+
+  @@map("agenda_vacinas")
+}
+
+model CicloReprodutivo {
+  id             String    @id @default(uuid())
+  femea_id       String
+  reprodutor_id  String?
+  data_inseminacao DateTime?
+  previsao_parto DateTime?
+  data_parto     DateTime?
+  status         String    @default("EM_ANDAMENTO") // EM_ANDAMENTO, CONCLUIDO, FALHA
+  observacao     String?
+  created_at     DateTime  @default(now())
+
+  femea          Animal    @relation("FemeaCiclo", fields: [femea_id], references: [id])
+  reprodutor     Animal?   @relation("ReprodutorCiclo", fields: [reprodutor_id], references: [id])
+
+  @@map("ciclos_reprodutivos")
+}
+
+model Transacao {
+  id             String    @id @default(uuid())
+  tipo             String    // compra, venda
+  parceiro_id      String?
+  data_negociacao  DateTime
+  qtd_parcelas     Int       @default(1)
+  forma_pagamento  String?
+  valor_total      Float
+  nota_fiscal_url  String?
+  gta_url          String?
+  observacoes      String?
+  status           String    @default("pendente") // pendente, finalizada, cancelada
+  created_at       DateTime  @default(now())
+
+  parceiro         Parceiro? @relation(fields: [parceiro_id], references: [id])
+  parcelas         Parcela[]
+  animais          Animal[]
+
+  @@map("transacoes")
+}
+
+model HistoricoMovimentacao {
+  id               String    @id @default(uuid())
+  animal_id        String
+  local_origem_id  String?
+  local_destino_id String
+  data_movimentacao DateTime
+  motivo           String?
+  created_at       DateTime  @default(now())
+
+  animal           Animal    @relation(fields: [animal_id], references: [id])
+  local_origem     Local?    @relation("LocalOrigem", fields: [local_origem_id], references: [id])
+  local_destino    Local     @relation("LocalDestino", fields: [local_destino_id], references: [id])
+
+  @@map("historico_movimentacao")
+}
+
+model HistoricoPesagem {
+  id           String    @id @default(uuid())
+  animal_id    String
+  peso         Float
+  data_pesagem DateTime
+  observacao   String?
+  created_at   DateTime  @default(now())
+
+  animal       Animal    @relation(fields: [animal_id], references: [id])
+
+  @@map("historico_pesagem")
+}
+
+model CotacaoHistorica {
+  id         String    @id @default(uuid())
+  data       DateTime
+  produto    String    // ARROBA_BOI, MILHO, SOJA
+  valor      Float
+  estado     String?
+  created_at DateTime  @default(now())
+
+  @@map("cotacoes_historicas")
+}
