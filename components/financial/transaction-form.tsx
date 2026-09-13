@@ -21,6 +21,8 @@ import { Loader2, Save, X, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { getTransactionFormData } from "@/app/transacoes/form-actions";
 import { createTransacao } from "@/app/transacoes/actions";
+import { SaleGroupsEditor } from "./sale-groups-editor";
+
 
 export function TransactionForm({
   tipo,
@@ -43,15 +45,19 @@ export function TransactionForm({
     forma_pagamento: "dinheiro",
     observacoes: "",
     valor_total: 0,
+    desconto_carcaca: 50,
   });
 
   const [animaisSelecionados, setAnimaisSelecionados] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [groupsSummary, setGroupsSummary] = useState("");
+  const [groupsData, setGroupsData] = useState<any[]>([]);
 
   useEffect(() => {
     getTransactionFormData(tipo).then(res => {
       setParceiros(res.parceiros);
       setAnimais(res.animais);
+      setFormData(f => ({ ...f, desconto_carcaca: res.desconto_carcaca ?? 50 }));
     }).catch(console.error);
   }, [tipo]);
 
@@ -64,6 +70,8 @@ export function TransactionForm({
         ...formData,
         tipo,
         animais_ids: animaisSelecionados,
+        grupos_data: groupsData,
+        observacoes: groupsSummary ? `${formData.observacoes ? formData.observacoes + '\n\n' : ''}${groupsSummary}` : formData.observacoes,
       });
 
       onSuccess?.();
@@ -149,7 +157,7 @@ export function TransactionForm({
                 <Input
                   type="number"
                   step="0.01"
-                  value={formData.valor_total || ""}
+                  value={formData.valor_total === 0 ? "" : formData.valor_total}
                   onChange={(e) => setFormData({ ...formData, valor_total: Number(e.target.value) })}
                   required
                 />
@@ -182,45 +190,18 @@ export function TransactionForm({
             <CardTitle className="text-base">Animais Relacionados</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por brinco ou nome..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 h-9 text-sm"
-              />
-            </div>
-            
-            <div className="text-sm text-muted-foreground">
-              {animaisSelecionados.length} selecionados
-            </div>
-
-            <ScrollArea className="h-[300px] rounded border p-2">
-              <div className="grid gap-1">
-                {filteredAnimais.map((animal) => (
-                  <label
-                    key={animal.id}
-                    className={`flex items-center gap-2 rounded p-2 cursor-pointer transition-colors ${
-                      animaisSelecionados.includes(animal.id) ? "bg-primary/10" : "hover:bg-muted"
-                    }`}
-                  >
-                    <Checkbox
-                      checked={animaisSelecionados.includes(animal.id)}
-                      onCheckedChange={() => toggleAnimal(animal.id)}
-                    />
-                    <span className="text-sm">
-                      {animal.brinco} {animal.nome ? `- ${animal.nome}` : ""}
-                    </span>
-                  </label>
-                ))}
-                {filteredAnimais.length === 0 && (
-                  <p className="text-sm text-center text-muted-foreground py-4">
-                    Nenhum animal encontrado.
-                  </p>
-                )}
-              </div>
-            </ScrollArea>
+            <SaleGroupsEditor 
+              animaisDisponiveis={animais}
+              tipo={tipo}
+              descontoCarcacaInicial={formData.desconto_carcaca}
+              onDescontoCarcacaChange={(val) => setFormData(f => ({ ...f, desconto_carcaca: val }))}
+              onGroupsChange={(ids, summary, data) => {
+                setAnimaisSelecionados(ids);
+                setGroupsSummary(summary);
+                setGroupsData(data);
+              }}
+              onTotalCalculated={(total) => setFormData(f => ({ ...f, valor_total: total }))}
+            />
           </CardContent>
         </Card>
       </div>

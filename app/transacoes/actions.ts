@@ -20,17 +20,31 @@ export async function createTransacao(data: any) {
     const result = await prisma.transacao.create({
       data: {
         tipo: data.tipo,
-        parceiro_id: data.parceiro_id,
+        parceiro_id: data.parceiro_id || null,
         data_negociacao: new Date(data.data_negociacao),
         qtd_parcelas: data.qtd_parcelas,
         forma_pagamento: data.forma_pagamento,
         valor_total: data.valor_total,
+        desconto_carcaca: data.desconto_carcaca,
         observacoes: data.observacoes,
         status: data.status || "pendente",
         gta_url: data.gta_url,
         nota_fiscal_url: data.nota_fiscal_url,
         animais: data.animais_ids ? {
           connect: data.animais_ids.map((id: string) => ({ id }))
+        } : undefined,
+        grupos: data.grupos_data ? {
+          create: data.grupos_data.map((g: any) => ({
+            nome: g.nome,
+            tipo_medida: g.tipo_medida,
+            valor_unidade: g.valor_unidade,
+            quantidade_animais: g.quantidade_animais,
+            peso_total: g.peso_total,
+            valor_calculado: g.valor_calculado,
+            animais: g.animais_ids ? {
+              connect: g.animais_ids.map((id: string) => ({ id }))
+            } : undefined
+          }))
         } : undefined,
         parcelas: {
           create: Array.from({ length: data.qtd_parcelas }).map((_, i) => {
@@ -50,12 +64,12 @@ export async function createTransacao(data: any) {
     if (data.tipo === "compra" && data.animais_ids) {
       await prisma.animal.updateMany({
         where: { id: { in: data.animais_ids } },
-        data: { comprador_id: data.parceiro_id }
+        data: { comprador_id: data.parceiro_id || null }
       });
     } else if (data.tipo === "venda" && data.animais_ids) {
       await prisma.animal.updateMany({
         where: { id: { in: data.animais_ids } },
-        data: { status: "VENDIDO", vendedor_id: data.parceiro_id }
+        data: { status: "VENDIDO", vendedor_id: data.parceiro_id || null }
       });
     }
 

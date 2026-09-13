@@ -9,8 +9,10 @@ export async function getTransactionFormData(tipo: string) {
   
   const animais = await getAnimais();
   
+  const fazenda = await import("@/lib/prisma").then(m => m.prisma.fazenda.findFirst());
   return {
     parceiros: parceiros.filter(p => p.ativo && (p.tipo === parceiroTipo || p.tipo === "ambos")),
-    animais: animais.filter(a => a.status === "ATIVO")
+    animais: animais.filter(a => a.status?.toLowerCase() === "ativo"),
+    desconto_carcaca: fazenda?.desconto_carcaca ?? 50
   }
 }
