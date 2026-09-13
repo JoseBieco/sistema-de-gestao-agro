@@ -58,19 +58,32 @@ export async function addAnimalWeight(payload: {
     const { prisma } = await import("@/lib/prisma");
 
     await prisma.$transaction(async (tx) => {
+      const data_insercao = new Date(payload.data_pesagem);
+      
       await tx.historicoPesagem.create({
         data: {
           animal_id: payload.animal_id,
           peso: payload.peso,
-          data_pesagem: new Date(payload.data_pesagem),
-          observacoes: payload.observacoes,
+          data_pesagem: data_insercao,
+          observacao: payload.observacoes,
         },
       });
 
-      await tx.animal.update({
-        where: { id: payload.animal_id },
-        data: { peso_atual: payload.peso },
+      // Update peso_atual if this is the newest date
+      const dataAtual = new Date().toISOString().split("T")[0];
+      const dataPayload = data_insercao.toISOString().split("T")[0];
+      
+      const latestWeight = await tx.historicoPesagem.findFirst({
+        where: { animal_id: payload.animal_id },
+        orderBy: { data_pesagem: 'desc' },
       });
+
+      if (!latestWeight || latestWeight.data_pesagem <= data_insercao || dataAtual === dataPayload) {
+        await tx.animal.update({
+          where: { id: payload.animal_id },
+          data: { peso_atual: payload.peso },
+        });
+      }
     });
 
     revalidatePath(`/animais/${payload.animal_id}`);
