@@ -5,6 +5,7 @@ import type React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
   CardContent,
@@ -66,6 +67,8 @@ export function ConfiguracoesClient({
   const [tiposVacina, setTiposVacina] = useState(initialTiposVacina);
   const [editingRaca, setEditingRaca] = useState<Raca | null>(null);
   const [editingVacina, setEditingVacina] = useState<TipoVacina | null>(null);
+  const [deleteRacaId, setDeleteRacaId] = useState<string | null>(null);
+  const [deleteVacinaId, setDeleteVacinaId] = useState<string | null>(null);
   const [mesesAplicacao, setMesesAplicacao] = useState<number[]>([]);
   const [racaDialogOpen, setRacaDialogOpen] = useState(false);
   const [vacinaDialogOpen, setVacinaDialogOpen] = useState(false);
@@ -80,6 +83,7 @@ export function ConfiguracoesClient({
     endereco: initialFazenda?.endereco || "",
     cidade: initialFazenda?.cidade || "",
     estado: initialFazenda?.estado || "SP",
+    desconto_carcaca: initialFazenda?.desconto_carcaca || 50,
   });
 
   async function handleSaveFazenda(e: React.FormEvent<HTMLFormElement>) {
@@ -196,21 +200,41 @@ export function ConfiguracoesClient({
   }
 
   async function handleDeleteRaca(id: string) {
-    if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
+    setDeleteRacaId(id);
+  }
 
-    const { deleteRaca } = await import("@/app/racas/actions");
-    const res = await deleteRaca(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
-    setRacas((prev) => prev.filter((r) => r.id !== id));
-    toast.success("Raça excluída com sucesso.");
+  const confirmDeleteRaca = async () => {
+    if (!deleteRacaId) return;
+    try {
+      const { deleteRaca } = await import("@/app/racas/actions");
+      const res = await deleteRaca(deleteRacaId);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      setRacas((prev) => prev.filter((r) => r.id !== deleteRacaId));
+      toast.success("Raça excluída com sucesso.");
+    } catch (error) {
+      toast.error("Erro ao excluir raça.");
+    } finally {
+      setDeleteRacaId(null);
+    }
   }
 
   async function handleDeleteVacina(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este tipo de vacina?")) return;
+    setDeleteVacinaId(id);
+  }
 
-    const { deleteTipoVacina } = await import("@/app/vacinas/actions");
-    const res = await deleteTipoVacina(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
-    setTiposVacina((prev) => prev.filter((v) => v.id !== id));
-    toast.success("Vacina excluída com sucesso.");
+  const confirmDeleteVacina = async () => {
+    if (!deleteVacinaId) return;
+    try {
+      const { deleteTipoVacina } = await import("@/app/vacinas/actions");
+      const res = await deleteTipoVacina(deleteVacinaId);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      setTiposVacina((prev) => prev.filter((v) => v.id !== deleteVacinaId));
+      toast.success("Vacina excluída com sucesso.");
+    } catch (error) {
+      toast.error("Erro ao excluir vacina.");
+    } finally {
+      setDeleteVacinaId(null);
+    }
   }
 
   const [isDoseUnica, setIsDoseUnica] = useState(false);
@@ -593,6 +617,47 @@ export function ConfiguracoesClient({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Configuração Comercial
+              </CardTitle>
+              <CardDescription>
+                Defina os parâmetros padrão para compras e vendas
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2 max-w-sm">
+                <Label htmlFor="desconto_carcaca_default">
+                  Configuração da arroba (Desconto Carcaça %)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="desconto_carcaca_default"
+                    type="number"
+                    value={configFazenda.desconto_carcaca}
+                    onChange={(e) =>
+                      setConfigFazenda((prev) => ({
+                        ...prev,
+                        desconto_carcaca: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                  <Button
+                    onClick={(e) => handleSaveFazenda(e as any)}
+                    disabled={isSavingFazenda}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este valor será usado como padrão nas compras e vendas de animais, podendo ser alterado no momento da transação.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
                 Aparência
               </CardTitle>
@@ -835,6 +900,8 @@ export function ConfiguracoesClient({
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog open={!!deleteRacaId} onOpenChange={(v) => !v && setDeleteRacaId(null)} title="Excluir Raça" description="Tem certeza que deseja excluir esta raça?" onConfirm={confirmDeleteRaca} />
+      <ConfirmDialog open={!!deleteVacinaId} onOpenChange={(v) => !v && setDeleteVacinaId(null)} title="Excluir Vacina" description="Tem certeza que deseja excluir este tipo de vacina?" onConfirm={confirmDeleteVacina} />
     </div>
   );
 }

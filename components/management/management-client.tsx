@@ -12,6 +12,7 @@ import type { Local, Animal } from "@/lib/types/database";
 import { deleteLocal } from "@/app/locais/actions";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ManagementClientProps {
   locais: Local[];
@@ -23,6 +24,7 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [newPastureOpen, setNewPastureOpen] = useState(false);
+  const [localToDelete, setLocalToDelete] = useState<Local | null>(null);
   const [selectedOrigin, setSelectedOrigin] = useState<string | null>(null);
   const [localToEdit, setLocalToEdit] = useState<Local | null>(null);
 
@@ -54,21 +56,26 @@ export function ManagementClient({ locais, animais }: ManagementClientProps) {
     setNewPastureOpen(true);
   };
 
-  const handleDeleteLocal = async (local: Local) => {
+    const handleDeleteLocal = async (local: Local) => {
     const qty = occupancyMap[local.id] || 0;
     if (qty > 0) {
       toast.error(`Não é possível excluir o local "${local.nome}" pois ele possui ${qty} animais.`);
       return;
     }
+    setLocalToDelete(local);
+  };
 
-    if (!confirm(`Tem certeza que deseja excluir o local "${local.nome}"?`)) return;
-
+  const confirmDeleteLocal = async () => {
+    if (!localToDelete) return;
     try {
-      const res = await deleteLocal(local.id); if (res?.error) { toast.error("Erro: " + res.error); return; }
+      const res = await deleteLocal(localToDelete.id);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
       toast.success("Local excluído com sucesso.");
       handleRefresh();
     } catch (e) {
       toast.error("Erro ao excluir local.");
+    } finally {
+      setLocalToDelete(null);
     }
   };
 

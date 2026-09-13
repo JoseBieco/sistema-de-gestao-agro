@@ -13,7 +13,7 @@ export async function getFazenda() {
   }
 }
 
-export async function updateFazenda(data: { nome: string; cnpj?: string; ie?: string; endereco?: string; cidade?: string; estado?: string }) {
+export async function updateFazenda(data: { nome: string; cnpj?: string; ie?: string; endereco?: string; cidade?: string; estado?: string; desconto_carcaca?: number }) {
   try {
     const existing = await prisma.fazenda.findFirst()
     
