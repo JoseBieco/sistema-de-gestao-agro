@@ -83,6 +83,8 @@ model Animal {
   peso_nascimento Float?
   peso_atual     Float?
   status         String    @default("ATIVO") // ATIVO, VENDIDO, MORTO
+  data_status    DateTime?
+  motivo_morte   String?
   local_id       String?
   mae_id         String?
   pai_id         String?
@@ -107,6 +109,7 @@ model Animal {
 
   agenda_vacinas         AgendaVacina[]
   transacoes             Transacao[]
+  transacao_grupos       TransacaoGrupo[]
   historico_pesagem      HistoricoPesagem[]
   historico_movimentacao HistoricoMovimentacao[]
   ciclos_femea           CicloReprodutivo[] @relation("FemeaCiclo")
@@ -140,7 +143,9 @@ model AgendaVacina {
   data_prevista  DateTime
   data_aplicacao DateTime?
   status         String    @default("PENDENTE") // PENDENTE, APLICADA, CANCELADA
-  observacao     String?
+  observacoes    String?
+  dose_numero    Int       @default(1)
+  vacina_pai_id  String?
   created_at     DateTime  @default(now())
 
   animal         Animal     @relation(fields: [animal_id], references: [id])
@@ -182,14 +187,33 @@ model Transacao {
   nota_fiscal_url  String?
   gta_url          String?
   observacoes      String?
+  desconto_carcaca Float?
   status           String    @default("pendente") // pendente, finalizada, cancelada
   created_at       DateTime  @default(now())
 
   parceiro         Parceiro? @relation(fields: [parceiro_id], references: [id])
   parcelas         Parcela[]
   animais          Animal[]
+  grupos           TransacaoGrupo[]
 
   @@map("transacoes")
+}
+
+model TransacaoGrupo {
+  id                 String    @id @default(uuid())
+  transacao_id       String
+  nome               String
+  tipo_medida        String    // arroba, kilo
+  valor_unidade      Float
+  quantidade_animais Int
+  peso_total         Float
+  valor_calculado    Float
+  created_at         DateTime  @default(now())
+
+  transacao          Transacao @relation(fields: [transacao_id], references: [id], onDelete: Cascade)
+  animais            Animal[]
+
+  @@map("transacao_grupos")
 }
 
 model HistoricoMovimentacao {
@@ -232,6 +256,7 @@ model CotacaoHistorica {
   data_coleta     DateTime? @default(now())
   created_at      DateTime  @default(now())
 
+  @@unique([data, produto, estado])
   @@map("cotacoes_historicas")
 }
 model Fazenda {
@@ -242,6 +267,7 @@ model Fazenda {
   endereco   String?
   cidade     String?
   estado     String?
+  desconto_carcaca Float? @default(50)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
