@@ -176,7 +176,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
     selectedTipos.forEach((tipo) => {
       const cotacoesTipo = filteredCotacoes
         .filter((c) => c.produto === tipo)
-        .sort((a, b) => a.data.localeCompare(b.data));
+        .sort((a, b) => String(a.data).localeCompare(String(b.data)));
 
       if (cotacoesTipo.length > 0) {
         const valores = cotacoesTipo.map((c) => c.valor);

@@ -35,6 +35,7 @@ import { formatDocument, formatPhone } from "@/lib/utils/format";
 import { Plus, Edit, Trash2, Loader2, Users } from "lucide-react";
 import type { Parceiro, TipoParceiro } from "@/lib/types/database";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ParceirosPageClientProps {
   initialParceiros: Parceiro[];
@@ -46,6 +47,7 @@ export function ParceirosPageClient({
   const router = useRouter();
   const [parceiros, setParceiros] = useState(initialParceiros);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteParceiroId, setDeleteParceiroId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [formData, setFormData] = useState({
@@ -124,21 +126,21 @@ export function ParceirosPageClient({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este parceiro?")) return;
+    setDeleteParceiroId(id);
+  }
 
+  const confirmDeleteParceiro = async () => {
+    if (!deleteParceiroId) return;
     try {
-      const res = await deleteParceiro(id);
-      if (res?.error) {
-        toast.error("Erro: " + res.error);
-        return;
-      }
-      toast.success("Sucesso ao excluir o parceiro.");
+      const res = await deleteParceiro(deleteParceiroId);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      toast.success("Parceiro excluído com sucesso.");
+      const data = await getParceiros();
+      if (data) setParceiros(data);
     } catch (error) {
-      toast.error(
-        "Erro ao excluir parceiro:: " +
-          (error instanceof Error ? error.message : error),
-      );
-      console.error("Erro ao excluir parceiro:", error);
+      toast.error("Erro ao excluir parceiro.");
+    } finally {
+      setDeleteParceiroId(null);
     }
   }
 
@@ -345,6 +347,7 @@ export function ParceirosPageClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog open={!!deleteParceiroId} onOpenChange={(v) => !v && setDeleteParceiroId(null)} title="Excluir Parceiro" description="Tem certeza que deseja excluir este parceiro?" onConfirm={confirmDeleteParceiro} />
     </div>
   );
 }

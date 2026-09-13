@@ -69,7 +69,7 @@ export function VaccineApplicationDialog({
     if (vacRes) setTiposVacina(vacRes);
     if (animaisRes) {
       // Filtra apenas ativos
-      setAnimais(animaisRes.filter((a: any) => a.status === "ativo"));
+      setAnimais(animaisRes.filter((a: any) => a.status?.toLowerCase() === "ativo"));
     }
   }
 
@@ -80,12 +80,17 @@ export function VaccineApplicationDialog({
     try {
       const { applyVacinasEmLote } = await import("@/app/vacinas/actions");
       
-      await applyVacinasEmLote({
+      const res = await applyVacinasEmLote({
         animais_ids: selectedAnimals,
         tipo_vacina_id: formData.tipo_vacina_id,
         data_aplicacao: formData.data_aplicacao,
         observacoes: formData.observacoes,
       });
+
+      if (res?.error) {
+        toast.error("Erro: " + res.error);
+        return;
+      }
 
       onSuccess();
       onOpenChange(false);

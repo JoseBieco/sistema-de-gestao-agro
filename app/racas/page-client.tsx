@@ -25,6 +25,7 @@ import {
 import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import type { Raca } from "@/lib/types/database";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 import { createRaca, updateRaca, deleteRaca, getRacas } from "./actions";
 
@@ -36,6 +37,7 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
   const router = useRouter();
   const [racas, setRacas] = useState(initialRacas);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteRacaId, setDeleteRacaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingRaca, setEditingRaca] = useState<Raca | null>(null);
   const [formData, setFormData] = useState({ nome: "", descricao: "" });
@@ -77,17 +79,21 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
+    setDeleteRacaId(id);
+  }
 
+  const confirmDeleteRaca = async () => {
+    if (!deleteRacaId) return;
     try {
-      const res = await deleteRaca(id); if (res?.error) { toast.error("Erro: " + res.error); return; }
-      toast.success("Sucesso ao excluir a raça.");
-
-      setRacas(racas.filter((r) => r.id !== id));
-      router.refresh();
+      const res = await deleteRaca(deleteRacaId);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      toast.success("Raça excluída com sucesso.");
+      const data = await getRacas();
+      if (data) setRacas(data);
     } catch (error) {
-      toast.error("Erro ao excluir raça:: " + (error instanceof Error ? error.message : error));
-      console.error("Erro ao excluir raça:", error);
+      toast.error("Erro ao excluir raça.");
+    } finally {
+      setDeleteRacaId(null);
     }
   }
 
@@ -198,6 +204,7 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog open={!!deleteRacaId} onOpenChange={(v) => !v && setDeleteRacaId(null)} title="Excluir Raça" description="Tem certeza que deseja excluir esta raça?" onConfirm={confirmDeleteRaca} />
     </div>
   );
 }

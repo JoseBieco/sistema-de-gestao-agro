@@ -48,12 +48,16 @@ export function AddWeightDialog({
 
     try {
       const { addAnimalWeight } = await import("@/app/animais/actions");
-      await addAnimalWeight({
+      const res = await addAnimalWeight({
         animal_id: animalId,
         peso: novoPeso,
         data_pesagem: formData.data_pesagem,
         observacoes: formData.observacoes,
       });
+
+      if (!res.success) {
+        throw new Error(res.error);
+      }
 
       toast.success("Peso registrado com sucesso!");
       onSuccess?.();
