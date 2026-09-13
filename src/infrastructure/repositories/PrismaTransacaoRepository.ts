@@ -7,7 +7,13 @@ export class PrismaTransacaoRepository implements ITransacaoRepository {
     return await prisma.transacao.findMany({
       include: {
         parceiro: true,
-        animais: true,
+        animais: {
+          include: { raca: true }
+        },
+        parcelas: true,
+        grupos: {
+          include: { animais: { select: { id: true } } }
+        }
       },
       orderBy: { data_negociacao: 'desc' }
     }) as any;
@@ -18,7 +24,13 @@ export class PrismaTransacaoRepository implements ITransacaoRepository {
       where: { id },
       include: {
         parceiro: true,
-        animais: true,
+        animais: {
+          include: { raca: true }
+        },
+        parcelas: true,
+        grupos: {
+          include: { animais: { select: { id: true } } }
+        }
       }
     }) as any;
   }

@@ -65,9 +65,12 @@ export class CotacaoService {
       }
 
       // Salvar no banco de dados local
+      // Always use startOfDay to ensure time doesn't cause duplicates
+      const dataCorrigida = new Date(`${hojeStr}T00:00:00.000Z`);
+
       const cotacaoSalva = await prisma.cotacaoHistorica.create({
         data: {
-          data: data.atualizado ? new Date(data.atualizado) : new Date(hojeStr),
+          data: dataCorrigida,
           produto: produto,
           valor: valor,
           estado: uf,
