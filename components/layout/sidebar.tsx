@@ -24,6 +24,7 @@ import {
   Receipt,
   ArrowLeftRight,
   Baby,
+  Package,
 } from "lucide-react";
 
 interface NavItem {
@@ -57,6 +58,12 @@ const navigation: NavGroup[] = [
     items: [
       { title: "Calendário", href: "/calendario", icon: Calendar },
       { title: "Vacinas", href: "/vacinas", icon: Syringe },
+    ],
+  },
+  {
+    title: "Estoque e Nutrição",
+    items: [
+      { title: "Insumos", href: "/insumos", icon: Package },
     ],
   },
   {
