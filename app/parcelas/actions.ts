@@ -2,6 +2,7 @@
 
 import { ParcelaService } from "@/src/core/services/ParcelaService";
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
 
 const parcelaService = new ParcelaService();
 
@@ -45,14 +46,15 @@ export async function deleteParcela(id: string) {
 
 export async function payParcela(id: string, paymentData: any) {
   try {
-    const { prisma } = require('@/lib/prisma');
 
     const parcela = await prisma.parcela.update({
       where: { id },
       data: {
         status: "pago",
+        valor: paymentData.valor !== undefined ? Number(paymentData.valor) : undefined,
         data_pagamento: paymentData.data_pagamento ? new Date(paymentData.data_pagamento) : null,
         data_baixa_promissoria: paymentData.data_baixa_promissoria ? new Date(paymentData.data_baixa_promissoria) : null,
+        observacoes: paymentData.observacoes !== undefined ? paymentData.observacoes : undefined,
         foto_promissoria_frente_url: null, // Skipping file upload for now in local env
       }
     });

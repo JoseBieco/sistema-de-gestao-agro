@@ -85,11 +85,13 @@ interface TransacaoExtended {
 interface TransacaoDetailClientProps {
   transacao: TransacaoExtended;
   tipo: TipoTransacao;
+  parceiros: Parceiro[];
 }
 
 export function TransacaoDetailClient({
   transacao,
   tipo,
+  parceiros,
 }: TransacaoDetailClientProps) {
   const router = useRouter();
   const [parcelas, setParcelas] = useState(transacao.parcelas || []);
@@ -105,11 +107,16 @@ export function TransacaoDetailClient({
     status: transacao.status || "pendente",
     observacoes: transacao.observacoes || "",
     nota_fiscal_url: transacao.nota_fiscal_url || "",
-    gta_url: transacao.gta_url || ""
+    gta_url: transacao.gta_url || "",
+    parceiro_id: transacao.parceiro_id || ""
   });
 
   const isCompra = tipo === "compra";
   const Icon = isCompra ? ShoppingCart : TrendingUp;
+
+  const somaParcelas = parcelas.reduce((acc, p) => acc + (p.valor || 0), 0);
+  const diferencaParcelas = transacao.valor_total - somaParcelas;
+  const hasDiferenca = Math.abs(diferencaParcelas) > 0.01;
 
   const stats = {
     totalParcelas: parcelas.length,
@@ -126,6 +133,7 @@ export function TransacaoDetailClient({
 
   async function handleUpdateParcela(data: {
     status: string;
+    valor?: number;
     data_pagamento?: string;
     data_baixa_promissoria?: string;
     observacoes?: string;
@@ -143,6 +151,7 @@ export function TransacaoDetailClient({
       } else {
         updated = await updateParcela(selectedParcela.id, {
           status: data.status,
+          valor: data.valor,
           data_pagamento: data.data_pagamento ? new Date(data.data_pagamento).toISOString() : null,
           data_baixa_promissoria: data.data_baixa_promissoria ? new Date(data.data_baixa_promissoria).toISOString() : null,
           observacoes: data.observacoes
@@ -162,7 +171,7 @@ export function TransacaoDetailClient({
       console.error(error);
     } finally {
       setLoading(false);
-      setEditParcelaOpen(false);
+      setDialogOpen(false);
       setSelectedParcela(null);
     }
   }
@@ -557,6 +566,20 @@ export function TransacaoDetailClient({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {hasDiferenca && (
+                <div className="p-3 mb-4 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2 text-amber-800 text-sm">
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Atenção aos Valores</p>
+                    <p>
+                      A soma das parcelas ({formatCurrency(somaParcelas)}) difere do total da transação ({formatCurrency(transacao.valor_total)}).
+                      {diferencaParcelas > 0
+                        ? ` Falta distribuir ${formatCurrency(Math.abs(diferencaParcelas))}.`
+                        : ` Há um excesso de ${formatCurrency(Math.abs(diferencaParcelas))}.`}
+                    </p>
+                  </div>
+                </div>
+              )}
               {parcelas.length > 0 ? (
                 parcelas.map((parcela) => (
                   <div
@@ -706,6 +729,7 @@ export function TransacaoDetailClient({
               const formData = new FormData(e.currentTarget);
               handleUpdateParcela({
                 status: formData.get("status") as string,
+                valor: formData.get("valor") ? Number(formData.get("valor")) : undefined,
                 data_pagamento:
                   (formData.get("data_pagamento") as string) || undefined,
                 data_baixa_promissoria:
@@ -718,6 +742,16 @@ export function TransacaoDetailClient({
             className="space-y-4"
           >
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="valor">Valor</Label>
+                <Input
+                  id="valor"
+                  name="valor"
+                  type="number"
+                  step="0.01"
+                  defaultValue={selectedParcela?.valor}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <select
@@ -786,6 +820,21 @@ export function TransacaoDetailClient({
             <DialogTitle>Editar Transação</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{isCompra ? "Vendedor" : "Comprador"}</Label>
+              <select
+                value={editForm.parceiro_id}
+                onChange={(e) => setEditForm({ ...editForm, parceiro_id: e.target.value })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione...</option>
+                {parceiros?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} {p.cpf_cnpj ? `(${p.cpf_cnpj})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Data de Negociação</Label>

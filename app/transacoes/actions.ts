@@ -84,7 +84,36 @@ export async function createTransacao(data: any) {
 
 export async function updateTransacao(id: string, data: any) {
   try {
+    const transacaoAtual = await prisma.transacao.findUnique({
+      where: { id },
+      include: { animais: true }
+    });
+
+    // Extract parceiro_id before delegating, in case we need to update it
+    const novoParceiroId = data.parceiro_id !== undefined ? (data.parceiro_id === "" ? null : data.parceiro_id) : undefined;
+    if (data.parceiro_id === "") {
+        data.parceiro_id = null;
+    }
+
     const result = await transacaoService.updateTransacao(id, data);
+
+    if (novoParceiroId !== undefined && transacaoAtual && transacaoAtual.parceiro_id !== novoParceiroId) {
+       const animaisIds = transacaoAtual.animais.map((a: any) => a.id);
+       if (animaisIds.length > 0) {
+         if (transacaoAtual.tipo === "compra") {
+            await prisma.animal.updateMany({
+              where: { id: { in: animaisIds } },
+              data: { comprador_id: novoParceiroId }
+            });
+         } else if (transacaoAtual.tipo === "venda") {
+            await prisma.animal.updateMany({
+              where: { id: { in: animaisIds } },
+              data: { vendedor_id: novoParceiroId }
+            });
+         }
+       }
+    }
+
     revalidatePath("/compras");
     revalidatePath("/vendas");
     revalidatePath("/parcelas");
