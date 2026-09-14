@@ -2,15 +2,10 @@ import { AppShell } from "@/components/layout/app-shell"
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ExtratoClient } from "./extrato-client"
+import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default async function DetalhesInsumoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -21,7 +16,7 @@ export default async function DetalhesInsumoPage(props: { params: Promise<{ id: 
     include: {
       movimentacoes: {
         orderBy: { data_transacao: "desc" },
-        take: 50 // Limitando aos últimos 50 para o extrato rápido
+        take: 50
       }
     }
   })
@@ -31,6 +26,14 @@ export default async function DetalhesInsumoPage(props: { params: Promise<{ id: 
   return (
     <AppShell title={`Detalhes: ${insumo.nome}`}>
       <div className="space-y-6">
+        <div>
+          <Button variant="ghost" asChild className="mb-4">
+            <Link href="/insumos/catalogo">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+            </Link>
+          </Button>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -54,38 +57,8 @@ export default async function DetalhesInsumoPage(props: { params: Promise<{ id: 
           <CardHeader>
             <CardTitle>Extrato Recente (Kardex)</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Quantidade</TableHead>
-                  <TableHead>Custo Médio Unit.</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {insumo.movimentacoes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Nenhuma movimentação registrada.</TableCell>
-                  </TableRow>
-                ) : (
-                  insumo.movimentacoes.map(mov => {
-                    const isEntrada = mov.quantidade > 0
-                    return (
-                      <TableRow key={mov.id}>
-                        <TableCell>{new Date(mov.data_transacao).toLocaleDateString()}</TableCell>
-                        <TableCell><Badge variant="outline">{mov.tipo_transacao}</Badge></TableCell>
-                        <TableCell className={`text-right font-bold ${isEntrada ? 'text-green-600' : 'text-red-600'}`}>
-                          {isEntrada ? '+' : ''}{mov.quantidade}
-                        </TableCell>
-                        <TableCell>R$ {mov.custo_por_unidade?.toFixed(4) || '-'}</TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
+          <CardContent>
+            <ExtratoClient movimentacoes={insumo.movimentacoes} />
           </CardContent>
         </Card>
       </div>
