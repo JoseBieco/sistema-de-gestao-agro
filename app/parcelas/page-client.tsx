@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { payParcela } from "./actions";
+import { payParcela, payInsumoParcela } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,7 @@ import {
   Loader2,
   FileImage,
   Printer,
+  Package
 } from "lucide-react";
 import type { Parcela, Transacao, Parceiro } from "@/lib/types/database";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -42,6 +43,9 @@ import { ReceiptDialog } from "@/components/financial/receipt-dialog";
 import { ImageViewDialog } from "@/components/ui/image-view-dialog";
 
 type ParcelaExtended = Parcela & {
+  origem?: "REBANHO" | "ESTOQUE";
+  parceiro_nome?: string;
+  tipo_operacao?: "Receita" | "Despesa";
   transacao?: Transacao & {
     parceiro?: Parceiro;
   };
@@ -108,10 +112,17 @@ export function ParcelasPageClient({
     setLoading(true);
 
     try {
-      await payParcela(selectedParcela.id, {
-        data_pagamento: paymentData.data_pagamento,
-        data_baixa_promissoria: paymentData.data_baixa_promissoria,
-      });
+      if (selectedParcela.origem === "ESTOQUE") {
+        await payInsumoParcela(selectedParcela.id, {
+          data_pagamento: paymentData.data_pagamento,
+          forma_pagamento: "dinheiro"
+        });
+      } else {
+        await payParcela(selectedParcela.id, {
+          data_pagamento: paymentData.data_pagamento,
+          data_baixa_promissoria: paymentData.data_baixa_promissoria,
+        });
+      }
 
       setPaymentDialogOpen(false);
     } catch (error) {
@@ -130,14 +141,14 @@ export function ParcelasPageClient({
   });
 
   const aReceber = processedParcelas.filter(
-    (p) => p.transacao?.tipo === "venda" && p.status !== "pago"
+    (p) => p.tipo_operacao === "Receita" && p.status.toLowerCase() !== "pago"
   );
   const aPagar = processedParcelas.filter(
-    (p) => p.transacao?.tipo === "compra" && p.status !== "pago"
+    (p) => p.tipo_operacao === "Despesa" && p.status.toLowerCase() !== "pago"
   );
-  const pendentes = processedParcelas.filter((p) => p.status === "pendente");
-  const atrasadas = processedParcelas.filter((p) => p.status === "atrasado");
-  const pagas = processedParcelas.filter((p) => p.status === "pago");
+  const pendentes = processedParcelas.filter((p) => p.status.toLowerCase() === "pendente" || p.status.toLowerCase() === "pendente_pagamento");
+  const atrasadas = processedParcelas.filter((p) => p.status.toLowerCase() === "atrasado");
+  const pagas = processedParcelas.filter((p) => p.status.toLowerCase() === "pago");
 
   const filteredParcelas = (() => {
     switch (activeTab) {
@@ -258,17 +269,22 @@ export function ParcelasPageClient({
                     filteredParcelas.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">
-                          {p.transacao?.parceiro?.nome || "-"}
+                          {p.parceiro_nome}
+                          {p.origem === "ESTOQUE" && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              <Package className="mr-1 h-3 w-3" /> Estoque
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              p.transacao?.tipo === "venda"
+                              p.tipo_operacao === "Receita"
                                 ? "default"
                                 : "secondary"
                             }
                           >
-                            {p.transacao?.tipo === "venda"
+                            {p.tipo_operacao === "Receita"
                               ? "Receber"
                               : "Pagar"}
                           </Badge>
@@ -277,7 +293,7 @@ export function ParcelasPageClient({
                         <TableCell>{formatDate(p.data_vencimento)}</TableCell>
                         <TableCell
                           className={
-                            p.transacao?.tipo === "venda"
+                            p.tipo_operacao === "Receita"
                               ? "text-emerald-600"
                               : "text-red-600"
                           }

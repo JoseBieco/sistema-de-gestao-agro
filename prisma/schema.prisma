@@ -115,6 +115,7 @@ model Animal {
   historico_movimentacao HistoricoMovimentacao[]
   ciclos_femea           CicloReprodutivo[] @relation("FemeaCiclo")
   ciclos_reprodutor      CicloReprodutivo[] @relation("ReprodutorCiclo")
+  tratamentos_aplicados  TratamentoAplicado[]
 
   @@map("animais")
 }
@@ -397,3 +398,109 @@ model MovimentacaoEstoque {
 
   @@map("movimentacao_estoque")
 }
+
+// ==========================================
+// MÓDULO SANITÁRIO (Estoque e Livro de Doenças)
+// ==========================================
+
+model ProdutoSanitario {
+  id                 String   @id @default(uuid())
+  nome               String
+  tipo               String   // "REMEDIO" ou "VACINA"
+  quantidade_estoque Float    @default(0)
+  unidade_medida     String   // Ex: ml, dose, frasco
+  indicacao          String?  // Para que serve
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  ocorrencias_vinculadas OcorrenciaProduto[]
+  movimentacoes          MovimentacaoEstoqueSanitario[]
+  tratamentos_aplicados  TratamentoAplicadoProduto[]
+
+  @@map("produtos_sanitarios")
+}
+
+model MovimentacaoEstoqueSanitario {
+  id                 String   @id @default(uuid())
+  produto_id         String
+  tipo_transacao     String   // ENTRADA, SAIDA, AJUSTE
+  quantidade         Float
+  data_transacao     DateTime @default(now())
+  observacoes        String?
+  created_at         DateTime @default(now())
+
+  produto            ProdutoSanitario @relation(fields: [produto_id], references: [id])
+
+  @@map("movimentacao_estoque_sanitario")
+}
+
+model OcorrenciaSanitaria {
+  id                 String   @id @default(uuid())
+  nome               String   // Ex: Nascimento de bezerro
+  descricao          String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  produtos_indicados OcorrenciaProduto[]
+  tratamentos_aplicados TratamentoAplicado[]
+
+  @@map("ocorrencias_sanitarias")
+}
+
+model OcorrenciaProduto {
+  id                 String   @id @default(uuid())
+  ocorrencia_id      String
+  produto_id         String
+  observacoes        String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  ocorrencia         OcorrenciaSanitaria @relation(fields: [ocorrencia_id], references: [id], onDelete: Cascade)
+  produto            ProdutoSanitario    @relation(fields: [produto_id], references: [id])
+  dosagens           DosagemOcorrencia[]
+
+  @@map("ocorrencia_produtos")
+}
+
+model DosagemOcorrencia {
+  id                    String   @id @default(uuid())
+  ocorrencia_produto_id String
+  nome_faixa            String   // Ex: "Bezerro", "Adulto"
+  quantidade            Float
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  ocorrencia_produto    OcorrenciaProduto @relation(fields: [ocorrencia_produto_id], references: [id], onDelete: Cascade)
+
+  @@map("dosagens_ocorrencia")
+}
+
+model TratamentoAplicado {
+  id                 String   @id @default(uuid())
+  animal_id          String
+  ocorrencia_id      String
+  data_aplicacao     DateTime @default(now())
+  observacoes        String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  animal             Animal              @relation(fields: [animal_id], references: [id])
+  ocorrencia         OcorrenciaSanitaria @relation(fields: [ocorrencia_id], references: [id])
+  produtos_aplicados TratamentoAplicadoProduto[]
+
+  @@map("tratamentos_aplicados")
+}
+
+model TratamentoAplicadoProduto {
+  id                     String   @id @default(uuid())
+  tratamento_aplicado_id String
+  produto_id             String
+  quantidade_aplicada    Float
+  created_at             DateTime @default(now())
+
+  tratamento_aplicado    TratamentoAplicado @relation(fields: [tratamento_aplicado_id], references: [id], onDelete: Cascade)
+  produto                ProdutoSanitario   @relation(fields: [produto_id], references: [id])
+
+  @@map("tratamentos_aplicados_produtos")
+}
+

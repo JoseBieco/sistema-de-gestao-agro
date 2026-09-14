@@ -7,35 +7,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Trash, Plus } from "lucide-react"
 import { toast } from "sonner"
-import { createCompra } from "../../actions"
+import { updateCompra } from "../../../actions"
 
-export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any[], fornecedores: any[] }) {
+export function InsumoCompraEditClient({ initialData, insumos, fornecedores }: { initialData: any, insumos: any[], fornecedores: any[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
   const [formData, setFormData] = useState({
-    parceiro_id: "",
-    data_solicitacao: new Date().toISOString().split("T")[0],
-    data_prevista_entrega: "",
-    valor_frete: 0,
-    valor_outros_custos: 0,
-    observacoes: ""
+    parceiro_id: initialData.parceiro_id,
+    data_solicitacao: new Date(initialData.data_solicitacao).toISOString().split("T")[0],
+    data_prevista_entrega: initialData.data_prevista_entrega ? new Date(initialData.data_prevista_entrega).toISOString().split("T")[0] : "",
+    valor_frete: initialData.valor_frete,
+    valor_outros_custos: initialData.valor_outros_custos,
+    observacoes: initialData.observacoes || ""
   })
 
-  const [itens, setItens] = useState([{
-    insumo_id: "",
-    quantidade_compra: 1,
-    unidade_compra: "",
-    fator_conversao: 1,
-    valor_unitario: 0
-  }])
+  const [itens, setItens] = useState(initialData.itens.map((i: any) => ({
+    insumo_id: i.insumo_id,
+    quantidade_compra: i.quantidade_compra,
+    unidade_compra: i.unidade_compra,
+    fator_conversao: i.fator_conversao,
+    valor_unitario: i.valor_unitario
+  })))
 
   const handleAddItem = () => {
     setItens([...itens, { insumo_id: "", quantidade_compra: 1, unidade_compra: "", fator_conversao: 1, valor_unitario: 0 }])
   }
 
   const handleRemoveItem = (index: number) => {
-    setItens(itens.filter((_, i) => i !== index))
+    setItens(itens.filter((_: any, i: number) => i !== index))
   }
 
   const handleItemChange = (index: number, field: string, value: any) => {
@@ -44,13 +44,16 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
     setItens(newItens)
   }
 
-  const valorTotalItens = itens.reduce((acc, item) => acc + (item.quantidade_compra * item.valor_unitario), 0)
+  const valorTotalItens = itens.reduce((acc: number, item: any) => acc + (item.quantidade_compra * item.valor_unitario), 0)
   const valorTotalGeral = valorTotalItens + Number(formData.valor_frete) + Number(formData.valor_outros_custos)
 
-  const [gerarParcelas, setGerarParcelas] = useState(true)
-  const [qtdParcelas, setQtdParcelas] = useState(1)
-  const [formaPagamento, setFormaPagamento] = useState("dinheiro")
-  const [dataPrimeiraParcela, setDataPrimeiraParcela] = useState(new Date().toISOString().split("T")[0])
+  // Gerador de Parcelas
+  const temMaisDeUmaParcela = initialData.parcelas.length > 1;
+  const [gerarParcelas, setGerarParcelas] = useState(temMaisDeUmaParcela)
+  const [qtdParcelas, setQtdParcelas] = useState(initialData.parcelas.length)
+  const [formaPagamento, setFormaPagamento] = useState(initialData.parcelas[0]?.forma_pagamento || "dinheiro")
+  const [dataPrimeiraParcela, setDataPrimeiraParcela] = useState(initialData.parcelas[0] ? new Date(initialData.parcelas[0].data_vencimento).toISOString().split("T")[0] : new Date().toISOString().split("T")[0])
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,14 +62,13 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
       toast.error("Selecione um fornecedor.")
       return
     }
-    if (itens.some(i => !i.insumo_id || i.quantidade_compra <= 0 || i.valor_unitario <= 0)) {
+    if (itens.some((i: any) => !i.insumo_id || i.quantidade_compra <= 0 || i.valor_unitario <= 0)) {
       toast.error("Preencha todos os itens corretamente.")
       return
     }
 
     setLoading(true)
 
-    // Gerar Parcelas
     const parcelas = []
     if (gerarParcelas && qtdParcelas > 0) {
       const valorPorParcela = valorTotalGeral / qtdParcelas;
@@ -94,7 +96,7 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
       ...formData,
       valor_frete: Number(formData.valor_frete),
       valor_outros_custos: Number(formData.valor_outros_custos),
-      itens: itens.map(i => ({
+      itens: itens.map((i: any) => ({
         ...i,
         quantidade_compra: Number(i.quantidade_compra),
         fator_conversao: Number(i.fator_conversao),
@@ -103,11 +105,11 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
       parcelas
     }
 
-    const result = await createCompra(payload)
+    const result = await updateCompra(initialData.id, payload)
 
     if (result.success) {
-      toast.success("Pedido gerado com sucesso!")
-      router.push("/insumos/compras")
+      toast.success("Pedido editado com sucesso!")
+      router.push(`/insumos/compras/${initialData.id}`)
     } else {
       toast.error("Erro: " + result.error)
       setLoading(false)
@@ -117,9 +119,9 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Novo Pedido de Compra</h2>
+        <h2 className="text-xl font-semibold">Editando Pedido</h2>
         <Button type="submit" disabled={loading}>
-          {loading ? "Salvando..." : "Salvar Pedido"}
+          {loading ? "Salvando..." : "Salvar Edição"}
         </Button>
       </div>
 
@@ -183,8 +185,8 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
             <div className="mt-4 pt-4 border-t space-y-4">
               <h3 className="text-sm font-medium">Financeiro (Parcelas)</h3>
               <div className="flex items-center gap-2">
-                <input type="checkbox" id="gerarParcelas" checked={gerarParcelas} onChange={e => setGerarParcelas(e.target.checked)} />
-                <label htmlFor="gerarParcelas" className="text-sm">Gerar parcelas no módulo financeiro</label>
+                <input type="checkbox" id="gerarParcelasEdit" checked={gerarParcelas} onChange={e => setGerarParcelas(e.target.checked)} />
+                <label htmlFor="gerarParcelasEdit" className="text-sm">Gerar parcelas no módulo financeiro</label>
               </div>
               
               {gerarParcelas && (
@@ -222,7 +224,7 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {itens.map((item, index) => (
+            {itens.map((item: any, index: number) => (
               <div key={index} className="flex gap-4 items-end border p-4 rounded-lg">
                 <div className="space-y-2 flex-1">
                   <label className="text-sm font-medium">Insumo</label>

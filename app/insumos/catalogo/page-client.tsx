@@ -20,28 +20,50 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { createInsumo } from "../actions"
+import { createInsumo, updateInsumo } from "../actions"
 import { toast } from "sonner"
+import { Edit, Eye } from "lucide-react"
+import Link from "next/link"
 
 export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
   const [insumos, setInsumos] = useState(initialData)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({ nome: "", unidade_base: "", descricao: "" })
+
+  const handleOpenDialog = (insumo?: any) => {
+    if (insumo) {
+      setEditingId(insumo.id)
+      setFormData({ nome: insumo.nome, unidade_base: insumo.unidade_base, descricao: insumo.descricao || "" })
+    } else {
+      setEditingId(null)
+      setFormData({ nome: "", unidade_base: "", descricao: "" })
+    }
+    setIsOpen(true)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    const result = await createInsumo(formData)
+    let result
+    if (editingId) {
+      result = await updateInsumo(editingId, formData)
+    } else {
+      result = await createInsumo(formData)
+    }
     
     if (result.success) {
-      toast.success("Insumo cadastrado com sucesso!")
-      setInsumos([...insumos, result.data])
+      toast.success(editingId ? "Insumo atualizado!" : "Insumo cadastrado!")
+      if (editingId) {
+        setInsumos(insumos.map(i => i.id === editingId ? { ...i, ...formData } : i))
+      } else {
+        setInsumos([...insumos, result.data])
+      }
       setIsOpen(false)
-      setFormData({ nome: "", unidade_base: "", descricao: "" })
     } else {
-      toast.error("Erro ao cadastrar: " + result.error)
+      toast.error("Erro: " + result.error)
     }
     
     setLoading(false)
@@ -53,13 +75,13 @@ export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
         <h2 className="text-xl font-semibold tracking-tight">Todos os Insumos</h2>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" /> Novo Insumo
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Cadastrar Insumo Base</DialogTitle>
+              <DialogTitle>{editingId ? "Editar Insumo" : "Cadastrar Insumo Base"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               <div className="space-y-2">
@@ -107,12 +129,13 @@ export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
                 <TableHead>Unidade Base</TableHead>
                 <TableHead>Estoque Atual (Cache)</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {insumos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                     Nenhum insumo cadastrado ainda.
                   </TableCell>
                 </TableRow>
@@ -123,6 +146,18 @@ export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
                     <TableCell>{insumo.unidade_base}</TableCell>
                     <TableCell>{insumo.estoque_em_cache} {insumo.unidade_base}</TableCell>
                     <TableCell className="text-muted-foreground">{insumo.descricao || "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(insumo)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/insumos/catalogo/${insumo.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

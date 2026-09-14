@@ -8,6 +8,7 @@ export default async function NovoPedidoCompraPage() {
   // Pega apenas fornecedores, assumindo que eles têm o tipo 'fornecedor_insumo' 
   // (ou pegamos todos e filtramos no cliente para evitar erros se não tiverem esse tipo ainda)
   const fornecedores = await prisma.parceiro.findMany({
+    where: { tipo: "fornecedor_insumo" },
     orderBy: { nome: "asc" }
   })
 

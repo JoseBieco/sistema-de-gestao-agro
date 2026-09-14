@@ -27,10 +27,27 @@ export async function createInsumo(data: { nome: string; unidade_base: string; d
     revalidatePath("/insumos");
     revalidatePath("/insumos/catalogo");
     return { success: true, data: result };
+    return { success: true, data: result };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
+
+export async function updateInsumo(id: string, data: { nome: string; unidade_base: string; descricao?: string }) {
+  try {
+    const prisma = await getPrisma();
+    const result = await prisma.insumo.update({
+      where: { id },
+      data
+    });
+    revalidatePath("/insumos");
+    revalidatePath("/insumos/catalogo");
+    return { success: true, data: result };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
 
 // ==========================================
 // COMPRAS DE INSUMOS
@@ -45,6 +62,92 @@ export async function getCompras() {
     },
     orderBy: { data_solicitacao: "desc" },
   });
+}
+
+export async function getCompra(id: string) {
+  const prisma = await getPrisma();
+  return await prisma.insumoCompra.findUnique({
+    where: { id },
+    include: {
+      parceiro: true,
+      itens: { include: { insumo: true } },
+      parcelas: { orderBy: { numero_parcela: "asc" } },
+      romaneios: { include: { itens: true } }
+    },
+  });
+}
+
+export async function updateCompra(id: string, payload: any) {
+  try {
+    const prisma = await getPrisma();
+    
+    const compraExistente = await prisma.insumoCompra.findUnique({
+      where: { id },
+      include: { romaneios: true }
+    });
+
+    if (!compraExistente) {
+      throw new Error("Compra não encontrada");
+    }
+
+    if (compraExistente.romaneios && compraExistente.romaneios.length > 0) {
+      throw new Error("Não é possível editar uma compra que já possui itens recebidos");
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      // 1. Limpa itens e parcelas antigas
+      await tx.insumoCompraItem.deleteMany({ where: { insumo_compra_id: id } });
+      await tx.insumoParcela.deleteMany({ where: { insumo_compra_id: id } });
+
+      let valor_itens = 0;
+      const itensComTotais = payload.itens.map((item: any) => {
+        const total = item.quantidade_compra * item.valor_unitario;
+        valor_itens += total;
+        return {
+          insumo_id: item.insumo_id,
+          quantidade_compra: item.quantidade_compra,
+          unidade_compra: item.unidade_compra,
+          fator_conversao: item.fator_conversao,
+          valor_unitario: item.valor_unitario,
+          valor_total: total
+        };
+      });
+
+      const valor_total = valor_itens + payload.valor_frete + payload.valor_outros_custos;
+
+      await tx.insumoCompra.update({
+        where: { id },
+        data: {
+          parceiro_id: payload.parceiro_id,
+          data_solicitacao: new Date(payload.data_solicitacao),
+          data_prevista_entrega: payload.data_prevista_entrega ? new Date(payload.data_prevista_entrega) : null,
+          valor_itens,
+          valor_frete: payload.valor_frete,
+          valor_outros_custos: payload.valor_outros_custos,
+          valor_total,
+          observacoes: payload.observacoes,
+          itens: {
+            create: itensComTotais
+          },
+          parcelas: {
+            create: payload.parcelas.map((p: any) => ({
+              numero_parcela: p.numero_parcela,
+              valor: p.valor,
+              forma_pagamento: p.forma_pagamento,
+              data_vencimento: new Date(p.data_vencimento)
+            }))
+          }
+        }
+      });
+    });
+
+    revalidatePath("/insumos");
+    revalidatePath("/insumos/compras");
+    revalidatePath(`/insumos/compras/${id}`);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 }
 
 export async function createCompra(payload: {
@@ -110,6 +213,51 @@ export async function createCompra(payload: {
 
     revalidatePath("/insumos");
     revalidatePath("/insumos/compras");
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function cancelCompra(id: string) {
+  try {
+    const prisma = await getPrisma();
+    
+    const compra = await prisma.insumoCompra.findUnique({
+      where: { id },
+      include: { romaneios: true }
+    });
+
+    if (!compra) {
+      throw new Error("Compra não encontrada");
+    }
+
+    if (compra.romaneios && compra.romaneios.length > 0) {
+      throw new Error("Não é possível cancelar uma compra que já possui itens recebidos. Estorne o recebimento primeiro.");
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      // Deleta apenas as parcelas não pagas
+      await tx.insumoParcela.deleteMany({
+        where: {
+          insumo_compra_id: id,
+          status: { not: "PAGO" }
+        }
+      });
+
+      // Atualiza o status da compra
+      await tx.insumoCompra.update({
+        where: { id },
+        data: {
+          status_entrega: "CANCELADO",
+          status_pagamento: "CANCELADO"
+        }
+      });
+    });
+
+    revalidatePath("/insumos");
+    revalidatePath("/insumos/compras");
+    revalidatePath(`/insumos/compras/${id}`);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -204,12 +352,34 @@ export async function receiveRomaneio(payload: {
       }
 
       // 4. Atualizar Status de Entrega da Compra
-      // (Simplificadamente, marcamos como ENTREGUE ou PARCIALMENTE_ENTREGUE)
-      // O ideal seria somar as qtds de todos os romaneios vs qtd da compra.
+      const compraTotal = await tx.insumoCompra.findUnique({
+        where: { id: payload.insumo_compra_id },
+        include: {
+          itens: true,
+          romaneios: { include: { itens: true } }
+        }
+      });
+
+      let todasEntregues = true;
+      for (const itemCompra of compraTotal.itens) {
+        let qtdEntregue = 0;
+        compraTotal.romaneios.forEach((rom: any) => {
+          rom.itens.forEach((ri: any) => {
+            if (ri.insumo_compra_item_id === itemCompra.id) {
+              qtdEntregue += Number(ri.quantidade_entregue);
+            }
+          });
+        });
+        if (qtdEntregue < Number(itemCompra.quantidade_compra)) {
+          todasEntregues = false;
+          break;
+        }
+      }
+
       await tx.insumoCompra.update({
         where: { id: payload.insumo_compra_id },
         data: {
-          status_entrega: "PARCIALMENTE_ENTREGUE" // Em um cenário completo, faríamos a checagem exata
+          status_entrega: todasEntregues ? "ENTREGUE" : "PARCIALMENTE_ENTREGUE"
         }
       });
     });

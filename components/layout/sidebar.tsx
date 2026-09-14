@@ -25,6 +25,10 @@ import {
   ArrowLeftRight,
   Baby,
   Package,
+  Truck,
+  List,
+  Pill,
+  Stethoscope,
 } from "lucide-react";
 
 interface NavItem {
@@ -58,12 +62,18 @@ const navigation: NavGroup[] = [
     items: [
       { title: "Calendário", href: "/calendario", icon: Calendar },
       { title: "Vacinas", href: "/vacinas", icon: Syringe },
+      { title: "Estoque", href: "/sanitario/estoque", icon: Pill },
+      { title: "Livro de Doenças", href: "/sanitario/doencas", icon: Stethoscope },
     ],
   },
   {
     title: "Estoque e Nutrição",
     items: [
-      { title: "Insumos", href: "/insumos", icon: Package },
+      { title: "Dashboard", href: "/insumos", icon: Package },
+      { title: "Catálogo", href: "/insumos/catalogo", icon: ClipboardList },
+      { title: "Compras", href: "/insumos/compras", icon: ShoppingCart },
+      { title: "Recebimentos", href: "/insumos/recebimento", icon: Truck },
+      { title: "Kardex", href: "/insumos/kardex", icon: List },
     ],
   },
   {
