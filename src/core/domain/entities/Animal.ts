@@ -21,7 +21,9 @@ export interface Animal {
   valor_compra?: number | null;
   comprador_id?: string | null;
   vendedor_id?: string | null;
+  origem: string;
   created_at: Date;
+  updated_at?: Date;
   
   // Relations
   raca?: Raca;

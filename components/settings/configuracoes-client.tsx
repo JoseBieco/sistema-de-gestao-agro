@@ -48,7 +48,7 @@ import {
   Save,
   AlertTriangle,
 } from "lucide-react";
-import type { Raca, TipoVacina } from "@/lib/types/database";
+import { Raca, TipoVacina } from "@prisma/client";
 
 interface ConfiguracoesClientProps {
   initialRacas: Raca[];
