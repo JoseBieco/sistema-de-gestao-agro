@@ -68,6 +68,7 @@ model Parceiro {
   transacoes Transacao[]
   compras    Animal[]  @relation("Comprador")
   vendas     Animal[]  @relation("Vendedor")
+  compras_insumos InsumoCompra[]
 
   @@map("parceiros")
 }
@@ -272,4 +273,127 @@ model Fazenda {
   updated_at DateTime @updatedAt
 
   @@map("fazendas")
+}
+
+// ==========================================
+// MÓDULO DE NUTRIÇÃO E ESTOQUE DE INSUMOS
+// ==========================================
+
+model Insumo {
+  id              String   @id @default(uuid())
+  nome            String
+  unidade_base    String   // Ex: kg, litro
+  descricao       String?
+  estoque_em_cache Float   @default(0)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  compras_itens   InsumoCompraItem[]
+  movimentacoes   MovimentacaoEstoque[]
+
+  @@map("insumos")
+}
+
+model InsumoCompra {
+  id                       String   @id @default(uuid())
+  parceiro_id              String
+  data_solicitacao         DateTime
+  data_prevista_entrega    DateTime?
+  status_pagamento         String   @default("PENDENTE") // PENDENTE, PARCIAL, PAGO
+  status_entrega           String   @default("PENDENTE") // PENDENTE, PARCIALMENTE_ENTREGUE, ENTREGUE
+  valor_itens              Float
+  valor_frete              Float    @default(0)
+  valor_outros_custos      Float    @default(0)
+  valor_total              Float
+  observacoes              String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  parceiro                 Parceiro @relation(fields: [parceiro_id], references: [id])
+  itens                    InsumoCompraItem[]
+  parcelas                 InsumoParcela[]
+  romaneios                RomaneioEntrega[]
+
+  @@map("insumos_compras")
+}
+
+model InsumoCompraItem {
+  id                 String   @id @default(uuid())
+  insumo_compra_id   String
+  insumo_id          String
+  quantidade_compra  Float
+  unidade_compra     String   // Ex: Tonelada, Saca 50kg
+  fator_conversao    Float    // Fator para converter em unidade_base
+  valor_unitario     Float
+  valor_total        Float
+  numero_lote        String?
+  data_validade      DateTime?
+
+  compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
+  insumo             Insumo       @relation(fields: [insumo_id], references: [id])
+  itens_recebidos    RomaneioItem[]
+
+  @@map("insumos_compras_itens")
+}
+
+model InsumoParcela {
+  id                 String   @id @default(uuid())
+  insumo_compra_id   String
+  numero_parcela     Int
+  data_vencimento    DateTime
+  data_pagamento     DateTime?
+  valor              Float
+  forma_pagamento    String?
+  status             String   @default("PENDENTE") // PENDENTE, PAGO, ATRASADO
+  observacoes        String?
+  created_at         DateTime @default(now())
+
+  compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
+
+  @@map("insumos_parcelas")
+}
+
+model RomaneioEntrega {
+  id                 String   @id @default(uuid())
+  insumo_compra_id   String
+  data_entrega       DateTime
+  nome_recebedor     String?
+  observacoes        String?
+  created_at         DateTime @default(now())
+
+  compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
+  itens              RomaneioItem[]
+
+  @@map("romaneios_entrega")
+}
+
+model RomaneioItem {
+  id                    String   @id @default(uuid())
+  romaneio_entrega_id   String
+  insumo_compra_item_id String
+  quantidade_entregue   Float    // Na unidade de compra
+  numero_lote           String?
+  data_validade         DateTime?
+
+  romaneio           RomaneioEntrega @relation(fields: [romaneio_entrega_id], references: [id], onDelete: Cascade)
+  compra_item        InsumoCompraItem @relation(fields: [insumo_compra_item_id], references: [id], onDelete: Cascade)
+
+  @@map("romaneios_itens")
+}
+
+model MovimentacaoEstoque {
+  id                 String   @id @default(uuid())
+  insumo_id          String
+  tipo_transacao     String   // ENTRADA_COMPRA, SAIDA_CONSUMO, AJUSTE_INVENTARIO, PERDA_VALIDADE
+  quantidade         Float    // Na unidade_base
+  data_transacao     DateTime @default(now())
+  referencia_id      String?  // Ex: ID do RomaneioItem ou registro de consumo
+  numero_lote        String?
+  data_validade      DateTime?
+  custo_por_unidade  Float?   // Custo real com frete rateado
+  observacoes        String?
+
+  insumo             Insumo   @relation(fields: [insumo_id], references: [id])
+
+  @@map("movimentacao_estoque")
 }

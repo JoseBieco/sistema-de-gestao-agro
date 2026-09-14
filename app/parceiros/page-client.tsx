@@ -148,12 +148,14 @@ export function ParceirosPageClient({
     comprador: "Comprador",
     vendedor: "Vendedor",
     ambos: "Comprador/Vendedor",
+    fornecedor_insumo: "Fornecedor Insumo",
   };
 
   const tipoBadgeVariant = {
     comprador: "default",
     vendedor: "secondary",
     ambos: "outline",
+    fornecedor_insumo: "destructive",
   } as const;
 
   return (
@@ -272,6 +274,7 @@ export function ParceirosPageClient({
                     <SelectItem value="comprador">Comprador</SelectItem>
                     <SelectItem value="vendedor">Vendedor</SelectItem>
                     <SelectItem value="ambos">Ambos</SelectItem>
+                    <SelectItem value="fornecedor_insumo">Fornecedor de Insumos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
