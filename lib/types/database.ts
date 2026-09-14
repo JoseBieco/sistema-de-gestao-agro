@@ -26,7 +26,7 @@ export interface HistoricoMovimentacao {
 export type Genero = "M" | "F";
 export type OrigemAnimal = "nascido" | "comprado";
 export type StatusAnimal = "ativo" | "vendido" | "morto" | "transferido";
-export type TipoParceiro = "comprador" | "vendedor" | "ambos";
+export type TipoParceiro = "comprador" | "vendedor" | "ambos" | "fornecedor_insumo";
 export type TipoTransacao = "compra" | "venda";
 export type StatusTransacao = "pendente" | "finalizada" | "cancelada";
 export type FormaPagamento =
