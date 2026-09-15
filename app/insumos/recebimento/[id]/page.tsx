@@ -89,7 +89,7 @@ export default async function RecebimentoDetalhesPage(props: { params: Promise<{
                       <TableCell>{item.quantidade_entregue} {item.compra_item.unidade_compra}</TableCell>
                       <TableCell>{item.numero_lote || "-"}</TableCell>
                       <TableCell>{item.data_validade ? new Date(item.data_validade).toLocaleDateString() : "-"}</TableCell>
-                      <TableCell>x{fator} = {baseQty} {item.compra_item.insumo.unidade_base}</TableCell>
+                      <TableCell>x{fator} = {baseQty} {item.compra_item.insumo.unidade_medida}</TableCell>
                     </TableRow>
                   )
                 })}

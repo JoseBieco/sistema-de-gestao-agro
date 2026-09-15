@@ -37,8 +37,8 @@ export function InsumoKardexClient({ initialData }: { initialData: any[] }) {
   // Pre-process data for easier searching in DataTable
   const data = movimentacoes.map(mov => ({
     ...mov,
-    insumo_nome: mov.insumo?.nome || "Desconhecido",
-    unidade_base: mov.insumo?.unidade_base || "",
+    insumo_nome: mov.item?.nome || "Desconhecido",
+    unidade_base: mov.item?.unidade_medida || "",
   }))
 
   const columns: ColumnDef<any>[] = [

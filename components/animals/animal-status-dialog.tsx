@@ -41,7 +41,7 @@ export function AnimalStatusDialog({
   onSuccess,
 }: AnimalStatusDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusAnimal>("ativo");
+  const [status, setStatus] = useState<StatusAnimal>("ATIVO");
   const [dataStatus, setDataStatus] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -57,7 +57,7 @@ export function AnimalStatusDialog({
         data_status: new Date(dataStatus),
       };
 
-      if (status === "morto") {
+      if (status === "MORTO") {
         updateData.motivo_morte = motivo;
       }
 
@@ -96,10 +96,9 @@ export function AnimalStatusDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="vendido">Vendido</SelectItem>
-                <SelectItem value="morto">Morto</SelectItem>
-                <SelectItem value="transferido">Transferido</SelectItem>
+                <SelectItem value="ATIVO">Ativo</SelectItem>
+                <SelectItem value="VENDIDO">Vendido</SelectItem>
+                <SelectItem value="MORTO">Morto</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -113,7 +112,7 @@ export function AnimalStatusDialog({
             />
           </div>
 
-          {status === "morto" && (
+          {status === "MORTO" && (
             <div className="space-y-2">
               <Label>Motivo/Causa</Label>
               <Textarea

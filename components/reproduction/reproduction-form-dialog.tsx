@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CalendarHeart, Baby } from "lucide-react";
 import { calcularPrevisoes } from "@/lib/utils/reproduction";
-import { formatDate } from "@/lib/utils/format";
+import { formatDate, formatDateInput } from "@/lib/utils/format";
 import { toast } from "sonner";
 import type { Animal, CicloReprodutivo } from "@/lib/types/database";
 
@@ -65,9 +65,9 @@ export function ReproductionFormDialog({
         // Modo Edição: Preenche com dados existentes
         setFormData({
           animal_id: cicloToEdit.animal_id,
-          data_ultimo_parto: cicloToEdit.data_ultimo_parto || "",
-          data_ultimo_cio: cicloToEdit.data_ultimo_cio || "",
-          data_cobertura: cicloToEdit.data_cobertura || "",
+          data_ultimo_parto: cicloToEdit.data_ultimo_parto ? formatDateInput(cicloToEdit.data_ultimo_parto) : "",
+          data_ultimo_cio: cicloToEdit.data_ultimo_cio ? formatDateInput(cicloToEdit.data_ultimo_cio) : "",
+          data_cobertura: cicloToEdit.data_cobertura ? formatDateInput(cicloToEdit.data_cobertura) : "",
           touro_id: cicloToEdit.touro_id || "",
           tipo_cobertura: cicloToEdit.tipo_cobertura || "monta_natural",
           observacoes: cicloToEdit.observacoes || "",

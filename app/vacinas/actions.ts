@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { VacinaService } from "@/src/core/services/VacinaService";
 import { revalidatePath } from "next/cache";
 
@@ -15,8 +17,8 @@ export async function createTipoVacina(data: any) {
     const result = await vacinaService.createTipoVacina(data);
     revalidatePath("/vacinas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -25,8 +27,8 @@ export async function updateTipoVacina(id: string, data: any) {
     const result = await vacinaService.updateTipoVacina(id, data);
     revalidatePath("/vacinas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -35,8 +37,8 @@ export async function deleteTipoVacina(id: string) {
     await vacinaService.deleteTipoVacina(id);
     revalidatePath("/vacinas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -54,8 +56,8 @@ export async function createAgenda(data: any) {
     });
     revalidatePath("/agenda");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -68,8 +70,8 @@ export async function updateAgenda(id: string, data: any) {
     });
     revalidatePath("/agenda");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -78,8 +80,8 @@ export async function deleteAgenda(id: string) {
     await vacinaService.deleteAgenda(id);
     revalidatePath("/vacinas"); // Updated to match new route
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -129,8 +131,8 @@ export async function applyVacinasEmLote(payload: {
 
     revalidatePath("/vacinas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -169,7 +171,7 @@ export async function applyPendingVacina(payload: {
 
     revalidatePath("/vacinas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

@@ -1,30 +1,22 @@
-export interface Raca {
-  id: string;
-  nome: string;
-  descricao?: string | null;
-  created_at: Date;
-}
+import type { Animal as PrismaAnimal, Raca as PrismaRaca } from "@prisma/client";
+import type { Local } from "./Local";
 
-export interface Animal {
-  id: string;
-  brinco: string;
-  nome?: string | null;
-  raca_id: string;
-  sexo: string;
-  data_nascimento?: Date | null;
-  peso_nascimento?: number | null;
-  peso_atual?: number | null;
-  status: string;
-  parcela_id?: string | null;
-  mae_id?: string | null;
-  pai_id?: string | null;
-  valor_compra?: number | null;
-  comprador_id?: string | null;
-  vendedor_id?: string | null;
-  origem: string;
-  created_at: Date;
-  updated_at?: Date;
-  
-  // Relations
+export type Raca = PrismaRaca;
+
+// O Prisma Client (ver lib/prisma.ts) converte automaticamente os campos
+// Decimal do banco para number puro antes de qualquer dado sair da camada
+// de acesso a dados — então, apesar do tipo gerado pelo Prisma marcar estes
+// campos como Decimal, em tempo de execução eles sempre são number.
+type AnimalBase = Omit<PrismaAnimal, "peso_nascimento" | "peso_atual" | "valor_compra"> & {
+  peso_nascimento: number | null;
+  peso_atual: number | null;
+  valor_compra: number | null;
+};
+
+export interface Animal extends AnimalBase {
+  // Relations (populated only when explicitly included in the query)
   raca?: Raca;
+  mae?: Animal | null;
+  pai?: Animal | null;
+  local?: Local | null;
 }

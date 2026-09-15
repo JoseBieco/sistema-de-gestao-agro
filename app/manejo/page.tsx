@@ -10,7 +10,7 @@ export default async function ManejoPage() {
     getAnimais()
   ]);
 
-  const activeAnimais = animaisRes ? animaisRes.filter((a: any) => a.status === "ativo") : [];
+  const activeAnimais = animaisRes ? animaisRes.filter((a: any) => a.status?.toUpperCase() === "ATIVO") : [];
 
   return (
     <AppShell title="Manejo de Pastagens">

@@ -49,7 +49,7 @@ export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
   const handleOpenDialog = (insumo?: any) => {
     if (insumo) {
       setEditingId(insumo.id)
-      form.reset({ nome: insumo.nome, unidade_base: insumo.unidade_base, descricao: insumo.descricao || "" })
+      form.reset({ nome: insumo.nome, unidade_base: insumo.unidade_medida, descricao: insumo.descricao || "" })
     } else {
       setEditingId(null)
       form.reset({ nome: "", unidade_base: "", descricao: "" })
@@ -70,7 +70,7 @@ export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
       if (result.success) {
         toast.success(editingId ? "Insumo atualizado!" : "Insumo cadastrado!")
         if (editingId) {
-          setInsumos(insumos.map(i => i.id === editingId ? { ...i, ...data } : i))
+          setInsumos(insumos.map(i => i.id === editingId ? { ...i, ...result.data } : i))
         } else {
           setInsumos([...insumos, result.data])
         }
@@ -92,16 +92,16 @@ export function InsumosCatalogoClient({ initialData }: { initialData: any[] }) {
       cell: ({ row }) => <div className="font-medium">{row.getValue("nome")}</div>,
     },
     {
-      accessorKey: "unidade_base",
+      accessorKey: "unidade_medida",
       header: "Unidade Base",
-      cell: ({ row }) => <Badge variant="outline">{row.getValue("unidade_base")}</Badge>,
+      cell: ({ row }) => <Badge variant="outline">{row.getValue("unidade_medida")}</Badge>,
     },
     {
-      accessorKey: "estoque_em_cache",
+      accessorKey: "estoque_atual",
       header: "Estoque Atual",
       cell: ({ row }) => {
-        const value = parseFloat(row.getValue("estoque_em_cache") || "0")
-        return <div>{value} {row.original.unidade_base}</div>
+        const value = parseFloat(row.getValue("estoque_atual") || "0")
+        return <div>{value} {row.original.unidade_medida}</div>
       }
     },
     {

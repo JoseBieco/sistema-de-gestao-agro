@@ -101,10 +101,10 @@ export function EstoquePageClient({ initialProdutos }: { initialProdutos: any[] 
       }
     },
     {
-      accessorKey: "quantidade_estoque",
+      accessorKey: "estoque_atual",
       header: "Quantidade",
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("quantidade_estoque"))
+        const amount = parseFloat(row.getValue("estoque_atual"))
         return <div className="font-medium">{amount} {row.original.unidade_medida}</div>
       }
     },

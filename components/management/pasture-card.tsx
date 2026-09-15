@@ -27,7 +27,7 @@ export function PastureCard({
   onDelete,
 }: PastureCardProps) {
   const occupancyRate =
-    local.capacidade_maxima > 0
+    local.capacidade_maxima && local.capacidade_maxima > 0
       ? (currentOccupancy / local.capacidade_maxima) * 100
       : 0;
 

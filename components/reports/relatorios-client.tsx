@@ -52,9 +52,9 @@ import type {
 
 interface RelatoriosClientProps {
   animais: (Animal & { raca?: Raca })[];
-  transacoes: (Transacao & { parceiro?: Parceiro })[];
+  transacoes: (Transacao & { parceiro?: Parceiro | null })[];
   vacinas: (AgendaVacina & { animal?: Animal; tipo_vacina?: TipoVacina })[];
-  parcelas: (Parcela & { transacao?: Transacao & { parceiro?: Parceiro } })[];
+  parcelas: (Parcela & { transacao?: Transacao & { parceiro?: Parceiro | null } })[];
 }
 
 export function RelatoriosClient({

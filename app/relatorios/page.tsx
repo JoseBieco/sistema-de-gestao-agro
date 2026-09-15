@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { AppShell } from "@/components/layout/app-shell";
 import { RelatoriosClient } from "@/components/reports/relatorios-client";
 import { CotacoesBIClient } from "@/components/reports/cotacoes-bi";
+import type { Animal, Raca, Transacao, Parceiro, AgendaVacina, TipoVacina, Parcela, CotacaoHistorica } from "@/lib/types/database";
 
 import { obterCotacoesInteligentes } from "@/app/cotacoes/actions";
 
@@ -46,13 +47,13 @@ export default async function RelatoriosPage() {
   return (
     <AppShell title="Relatórios">
       <RelatoriosClient
-        animais={animais || []}
-        transacoes={transacoes || []}
-        vacinas={vacinas || []}
-        parcelas={parcelas || []}
+        animais={(animais || []) as unknown as (Animal & { raca?: Raca })[]}
+        transacoes={(transacoes || []) as unknown as (Transacao & { parceiro?: Parceiro | null })[]}
+        vacinas={(vacinas || []) as unknown as (AgendaVacina & { animal?: Animal; tipo_vacina?: TipoVacina })[]}
+        parcelas={(parcelas || []) as unknown as (Parcela & { transacao?: Transacao & { parceiro?: Parceiro | null } })[]}
       />
       <div className="mt-8">
-        <CotacoesBIClient cotacoes={cotacoes || []} />
+        <CotacoesBIClient cotacoes={(cotacoes || []) as unknown as CotacaoHistorica[]} />
       </div>
     </AppShell>
   );

@@ -30,8 +30,8 @@ export async function RecentActivity() {
   const [animais, transacoes, vacinas] = await Promise.all([
     prisma.animal.findMany({ orderBy: { created_at: "desc" }, take: 4 }),
     prisma.transacao.findMany({ orderBy: { data_negociacao: "desc" }, take: 4 }),
-    prisma.agendaVacina.findMany({ 
-      where: { status: "concluida" }, 
+    prisma.agendaVacina.findMany({
+      where: { status: "aplicada" },
       orderBy: { data_aplicacao: "desc" }, 
       take: 4,
       include: { animal: true, tipo_vacina: true }
@@ -55,7 +55,7 @@ export async function RecentActivity() {
       id: `tr_${t.id}`,
       type: t.tipo as "compra" | "venda",
       title: t.tipo === "compra" ? "Nova compra registrada" : "Venda finalizada",
-      description: `Valor: R$ ${t.valor_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+      description: `Valor: R$ ${Number(t.valor_total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
       date: t.data_negociacao
     });
   });

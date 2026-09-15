@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { revalidatePath } from "next/cache";
 
 // Workaround para importar prisma de forma segura nos server actions
@@ -13,9 +15,14 @@ const getPrisma = async () => {
 // CATÁLOGO DE INSUMOS
 // ==========================================
 
+// Insumos são itens de estoque com categoria "INSUMO" (ver prisma/schema.prisma
+// ItemEstoque — o mesmo cadastro/Kardex é compartilhado com o módulo sanitário,
+// que usa categoria "SANITARIO").
+
 export async function getInsumos() {
   const prisma = await getPrisma();
-  return await prisma.insumo.findMany({
+  return await prisma.itemEstoque.findMany({
+    where: { categoria: "INSUMO" },
     orderBy: { nome: "asc" },
   });
 }
@@ -23,28 +30,38 @@ export async function getInsumos() {
 export async function createInsumo(data: { nome: string; unidade_base: string; descricao?: string }) {
   try {
     const prisma = await getPrisma();
-    const result = await prisma.insumo.create({ data });
+    const result = await prisma.itemEstoque.create({
+      data: {
+        categoria: "INSUMO",
+        nome: data.nome,
+        unidade_medida: data.unidade_base,
+        descricao: data.descricao,
+      }
+    });
     revalidatePath("/insumos");
     revalidatePath("/insumos/catalogo");
     return { success: true, data: result };
-    return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
 export async function updateInsumo(id: string, data: { nome: string; unidade_base: string; descricao?: string }) {
   try {
     const prisma = await getPrisma();
-    const result = await prisma.insumo.update({
+    const result = await prisma.itemEstoque.update({
       where: { id },
-      data
+      data: {
+        nome: data.nome,
+        unidade_medida: data.unidade_base,
+        descricao: data.descricao,
+      }
     });
     revalidatePath("/insumos");
     revalidatePath("/insumos/catalogo");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -104,7 +121,7 @@ export async function updateCompra(id: string, payload: any) {
         const total = item.quantidade_compra * item.valor_unitario;
         valor_itens += total;
         return {
-          insumo_id: item.insumo_id,
+          item_id: item.insumo_id,
           quantidade_compra: item.quantidade_compra,
           unidade_compra: item.unidade_compra,
           fator_conversao: item.fator_conversao,
@@ -145,8 +162,8 @@ export async function updateCompra(id: string, payload: any) {
     revalidatePath("/insumos/compras");
     revalidatePath(`/insumos/compras/${id}`);
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -180,7 +197,11 @@ export async function createCompra(payload: {
         const total = item.quantidade_compra * item.valor_unitario;
         valor_itens += total;
         return {
-          ...item,
+          item_id: item.insumo_id,
+          quantidade_compra: item.quantidade_compra,
+          unidade_compra: item.unidade_compra,
+          fator_conversao: item.fator_conversao,
+          valor_unitario: item.valor_unitario,
           valor_total: total
         };
       });
@@ -214,8 +235,8 @@ export async function createCompra(payload: {
     revalidatePath("/insumos");
     revalidatePath("/insumos/compras");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -259,8 +280,8 @@ export async function cancelCompra(id: string) {
     revalidatePath("/insumos/compras");
     revalidatePath(`/insumos/compras/${id}`);
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -308,19 +329,22 @@ export async function receiveRomaneio(payload: {
         where: { id: payload.insumo_compra_id }
       });
 
+      if (!compra) throw new Error("Compra não encontrada");
+
       // Custo extra total para rateio
       const totalCustosExtras = compra.valor_frete + compra.valor_outros_custos;
-      const ratioCustosExtras = totalCustosExtras / compra.valor_itens; // % de acrescimo em cada item
+      // Evita divisão por zero quando a compra não tem valor de itens (ex: itens gratuitos)
+      const ratioCustosExtras = compra.valor_itens > 0 ? totalCustosExtras / compra.valor_itens : 0; // % de acrescimo em cada item
 
       // 3. Processar Kardex para cada item entregue
       for (const itemEntregue of romaneio.itens) {
-        // Buscar o item da compra para obter fator_conversao, insumo_id, valor_unitario
+        // Buscar o item da compra para obter fator_conversao, item_id, valor_unitario
         const compraItem = await tx.insumoCompraItem.findUnique({
           where: { id: itemEntregue.insumo_compra_item_id }
         });
 
         const quantidade_base = itemEntregue.quantidade_entregue * compraItem.fator_conversao;
-        
+
         // Custo rateado por unidade da COMPRA (ex: Tonelada)
         const custo_unitario_com_rateio = compraItem.valor_unitario * (1 + ratioCustosExtras);
         // Custo rateado pela unidade BASE (ex: Kg)
@@ -329,7 +353,7 @@ export async function receiveRomaneio(payload: {
         // 3.1 Inserir no Kardex
         await tx.movimentacaoEstoque.create({
           data: {
-            insumo_id: compraItem.insumo_id,
+            item_id: compraItem.item_id,
             tipo_transacao: "ENTRADA_COMPRA",
             quantidade: quantidade_base,
             data_transacao: romaneio.data_entrega,
@@ -341,10 +365,10 @@ export async function receiveRomaneio(payload: {
         });
 
         // 3.2 Atualizar Cache de Estoque do Insumo
-        await tx.insumo.update({
-          where: { id: compraItem.insumo_id },
+        await tx.itemEstoque.update({
+          where: { id: compraItem.item_id },
           data: {
-            estoque_em_cache: {
+            estoque_atual: {
               increment: quantidade_base
             }
           }
@@ -388,15 +412,16 @@ export async function receiveRomaneio(payload: {
     revalidatePath("/insumos/compras");
     revalidatePath("/insumos/kardex");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
 export async function getMovimentacoesEstoque() {
   const prisma = await getPrisma();
   return await prisma.movimentacaoEstoque.findMany({
-    include: { insumo: true },
+    where: { item: { categoria: "INSUMO" } },
+    include: { item: true },
     orderBy: { data_transacao: "desc" },
   });
 }

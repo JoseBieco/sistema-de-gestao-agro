@@ -16,7 +16,7 @@ import type { Parcela, Transacao, Parceiro } from "@/lib/types/database";
 // Definição do tipo estendido necessário para o recibo
 type ParcelaExtended = Parcela & {
   transacao?: Transacao & {
-    parceiro?: Parceiro;
+    parceiro?: Parceiro | null;
   };
 };
 

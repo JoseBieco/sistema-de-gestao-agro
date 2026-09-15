@@ -13,7 +13,7 @@ export default async function ReproducaoPage() {
   return (
     <AppShell title="Controle Reprodutivo">
       <ReproductionPageClient
-        ciclos={ciclos || []}
+        ciclos={(ciclos || []) as any[]}
         femeas={femeas as any[]}
         touros={touros as any[]}
       />

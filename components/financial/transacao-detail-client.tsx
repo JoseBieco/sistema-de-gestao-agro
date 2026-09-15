@@ -55,7 +55,6 @@ import type {
   TipoTransacao,
   Parcela,
   Parceiro,
-  ItemTransacao,
   Animal,
   Raca,
 } from "@/lib/types/database";
@@ -75,8 +74,8 @@ interface TransacaoExtended {
   observacoes?: string;
   status: string;
   parceiro_id?: string;
+  desconto_carcaca?: number | null;
   parceiro?: Parceiro;
-  itens?: ItemTransacao[];
   parcelas?: Parcela[];
   animais?: any[];
   grupos?: any[];
@@ -794,7 +793,7 @@ export function TransacaoDetailClient({
               <Textarea
                 id="observacoes"
                 name="observacoes"
-                defaultValue={selectedParcela?.observacoes}
+                defaultValue={selectedParcela?.observacoes ?? undefined}
                 rows={3}
               />
             </div>

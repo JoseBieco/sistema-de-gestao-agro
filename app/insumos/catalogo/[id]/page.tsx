@@ -11,7 +11,7 @@ export default async function DetalhesInsumoPage(props: { params: Promise<{ id: 
   const params = await props.params;
   const id = params.id;
 
-  const insumo = await prisma.insumo.findUnique({
+  const insumo = await prisma.itemEstoque.findUnique({
     where: { id },
     include: {
       movimentacoes: {
@@ -40,7 +40,7 @@ export default async function DetalhesInsumoPage(props: { params: Promise<{ id: 
               <CardTitle className="text-sm font-medium text-muted-foreground">Estoque Atual</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{insumo.estoque_em_cache} <span className="text-lg font-normal text-muted-foreground">{insumo.unidade_base}</span></div>
+              <div className="text-2xl font-bold">{Number(insumo.estoque_atual)} <span className="text-lg font-normal text-muted-foreground">{insumo.unidade_medida}</span></div>
             </CardContent>
           </Card>
           <Card>
@@ -48,7 +48,7 @@ export default async function DetalhesInsumoPage(props: { params: Promise<{ id: 
               <CardTitle className="text-sm font-medium text-muted-foreground">Unidade Base</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{insumo.unidade_base}</div>
+              <div className="text-2xl font-bold">{insumo.unidade_medida}</div>
             </CardContent>
           </Card>
         </div>

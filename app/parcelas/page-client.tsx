@@ -47,7 +47,7 @@ type ParcelaExtended = Parcela & {
   parceiro_nome?: string;
   tipo_operacao?: "Receita" | "Despesa";
   transacao?: Transacao & {
-    parceiro?: Parceiro;
+    parceiro?: Parceiro | null;
   };
 };
 
@@ -132,9 +132,10 @@ export function ParcelasPageClient({
     }
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const processedParcelas = parcelas.map((p) => {
-    if (p.status === "pendente" && p.data_vencimento < today) {
+    if (p.status === "pendente" && new Date(p.data_vencimento) < today) {
       return { ...p, status: "atrasado" as const };
     }
     return p;

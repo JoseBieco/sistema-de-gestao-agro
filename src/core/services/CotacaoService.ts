@@ -68,8 +68,19 @@ export class CotacaoService {
       // Always use startOfDay to ensure time doesn't cause duplicates
       const dataCorrigida = new Date(`${hojeStr}T00:00:00.000Z`);
 
-      const cotacaoSalva = await prisma.cotacaoHistorica.create({
-        data: {
+      // Upsert em vez de create: se duas requisições chegarem ao mesmo tempo
+      // para o mesmo produto/estado/dia (ex: dois usuários abrindo a página de
+      // relatórios), a chave única (data, produto, estado) evita duplicidade.
+      const cotacaoSalva = await prisma.cotacaoHistorica.upsert({
+        where: {
+          data_produto_estado: {
+            data: dataCorrigida,
+            produto: produto,
+            estado: uf,
+          },
+        },
+        update: {},
+        create: {
           data: dataCorrigida,
           produto: produto,
           valor: valor,

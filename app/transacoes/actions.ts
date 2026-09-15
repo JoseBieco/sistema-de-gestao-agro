@@ -1,5 +1,6 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
 import { TransacaoService } from "@/src/core/services/TransacaoService";
 import { revalidatePath } from "next/cache";
 
@@ -17,6 +18,16 @@ import { prisma } from "@/lib/prisma";
 
 export async function createTransacao(data: any) {
   try {
+    if (data.tipo !== "compra" && data.tipo !== "venda") {
+      return { success: false, error: "Tipo de transação inválido." };
+    }
+    if (!data.valor_total || Number(data.valor_total) <= 0) {
+      return { success: false, error: "O valor total deve ser maior que zero." };
+    }
+    if (!data.qtd_parcelas || Number(data.qtd_parcelas) <= 0) {
+      return { success: false, error: "A quantidade de parcelas deve ser maior que zero." };
+    }
+
     const result = await prisma.transacao.create({
       data: {
         tipo: data.tipo,
@@ -77,8 +88,8 @@ export async function createTransacao(data: any) {
     revalidatePath("/vendas");
     revalidatePath("/parcelas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -118,8 +129,8 @@ export async function updateTransacao(id: string, data: any) {
     revalidatePath("/vendas");
     revalidatePath("/parcelas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -150,7 +161,7 @@ export async function deleteTransacao(id: string) {
     revalidatePath("/vendas");
     revalidatePath("/parcelas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

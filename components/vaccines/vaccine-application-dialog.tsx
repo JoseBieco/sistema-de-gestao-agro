@@ -23,7 +23,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import { Animal, TipoVacina } from "@prisma/client";
+import type { Animal, TipoVacina } from "@/lib/types/database";
 import { toast } from "sonner";
 
 interface VaccineApplicationDialogProps {

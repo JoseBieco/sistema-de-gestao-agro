@@ -2,10 +2,11 @@ import { AppShell } from "@/components/layout/app-shell"
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Edit } from "lucide-react"
+import { Edit, Ban } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -76,7 +77,7 @@ export default async function DetalhesCompraPage(props: { params: Promise<{ id: 
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Itens (Frete+Custos)</CardTitle></CardHeader>
-            <CardContent><div className="font-bold">R$ {compra.valor_itens.toFixed(2)} (+R$ {(compra.valor_frete + compra.valor_outros_custos).toFixed(2)})</div></CardContent>
+            <CardContent><div className="font-bold">R$ {compra.valor_itens.toFixed(2)} (+R$ {(Number(compra.valor_frete) + Number(compra.valor_outros_custos)).toFixed(2)})</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Pedido</CardTitle></CardHeader>
@@ -101,10 +102,10 @@ export default async function DetalhesCompraPage(props: { params: Promise<{ id: 
                 {compra.itens.map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.insumo.nome}</TableCell>
-                    <TableCell>{item.quantidade_compra} {item.unidade_compra}</TableCell>
+                    <TableCell>{Number(item.quantidade_compra)} {item.unidade_compra}</TableCell>
                     <TableCell>R$ {item.valor_unitario.toFixed(2)}</TableCell>
                     <TableCell>R$ {item.valor_total.toFixed(2)}</TableCell>
-                    <TableCell>x{item.fator_conversao} = {item.quantidade_compra * item.fator_conversao} {item.insumo.unidade_base}</TableCell>
+                    <TableCell>x{Number(item.fator_conversao)} = {Number(item.quantidade_compra) * Number(item.fator_conversao)} {item.insumo.unidade_medida}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

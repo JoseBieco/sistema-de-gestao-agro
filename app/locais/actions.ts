@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { LocalService } from "@/src/core/services/LocalService";
 import { revalidatePath } from "next/cache";
 
@@ -19,8 +21,8 @@ export async function createLocal(data: any) {
     revalidatePath("/manejo");
     revalidatePath("/parcelas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -30,8 +32,8 @@ export async function updateLocal(id: string, data: any) {
     revalidatePath("/manejo");
     revalidatePath("/parcelas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -41,8 +43,8 @@ export async function deleteLocal(id: string) {
     revalidatePath("/manejo");
     revalidatePath("/parcelas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -69,7 +71,7 @@ export async function moveAnimals(records: any[], destinationId: string, animalI
 
     revalidatePath("/manejo");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

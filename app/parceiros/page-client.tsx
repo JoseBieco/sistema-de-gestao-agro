@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { createParceiro, updateParceiro, deleteParceiro } from "./actions";
+import { createParceiro, updateParceiro, deleteParceiro, getParceiros } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -191,8 +191,8 @@ export function ParceirosPageClient({
                       {parceiro.nome}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={tipoBadgeVariant[parceiro.tipo]}>
-                        {tipoLabel[parceiro.tipo]}
+                      <Badge variant={tipoBadgeVariant[parceiro.tipo as TipoParceiro]}>
+                        {tipoLabel[parceiro.tipo as TipoParceiro]}
                       </Badge>
                     </TableCell>
                     <TableCell>

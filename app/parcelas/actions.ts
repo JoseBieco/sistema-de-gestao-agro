@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { ParcelaService } from "@/src/core/services/ParcelaService";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -51,8 +53,8 @@ export async function createParcela(data: any) {
     const result = await parcelaService.createParcela(data);
     revalidatePath("/parcelas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -61,8 +63,8 @@ export async function updateParcela(id: string, data: any) {
     const result = await parcelaService.updateParcela(id, data);
     revalidatePath("/parcelas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -71,8 +73,8 @@ export async function deleteParcela(id: string) {
     await parcelaService.deleteParcela(id);
     revalidatePath("/parcelas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -105,8 +107,8 @@ export async function payParcela(id: string, paymentData: any) {
 
     revalidatePath("/parcelas");
     return { success: true, data: parcela };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -141,8 +143,8 @@ export async function payInsumoParcela(id: string, paymentData: any) {
     revalidatePath("/parcelas");
     revalidatePath("/insumos/compras");
     return { success: true, data: parcela };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 

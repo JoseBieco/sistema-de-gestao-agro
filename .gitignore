@@ -1,6 +1,9 @@
 node_modules
 package-lock.json
 .env
+next-env.d.ts
+*.tsbuildinfo
+_backup_*.json
 
 
 /public

@@ -41,7 +41,7 @@ export class PrismaAnimalRepository implements IAnimalRepository {
   }
 
   async create(data: Omit<Animal, "id" | "created_at">): Promise<Animal> {
-    const { raca, ...animalData } = data;
+    const { raca, mae, pai, local, ...animalData } = data;
     const animal = await prisma.animal.create({
       data: {
         ...animalData,
@@ -54,7 +54,7 @@ export class PrismaAnimalRepository implements IAnimalRepository {
   }
 
   async update(id: string, data: Partial<Animal>): Promise<Animal> {
-    const { raca, ...animalData } = data;
+    const { raca, mae, pai, local, ...animalData } = data;
     const animal = await prisma.animal.update({
       where: { id },
       data: animalData,

@@ -1,31 +1,43 @@
 // =============================================
 // TIPOS DO BANCO DE DADOS
+//
+// Estes tipos são derivados diretamente dos modelos gerados pelo Prisma
+// (prisma/schema.prisma), para que nunca fiquem fora de sincronia com o
+// schema real do banco. Os tipos "estendidos" abaixo apenas acrescentam
+// os relacionamentos que as telas costumam carregar via `include`.
 // =============================================
 
-export interface Local {
-  id: string;
-  nome: string;
-  tipo: "pasto" | "piquete" | "curral" | "confinamento";
-  area_hectares: number;
-  capacidade_maxima: number;
-  observacoes?: string;
-  created_at: string;
-  updated_at: string;
-}
+import type {
+  Local as PrismaLocal,
+  HistoricoMovimentacao as PrismaHistoricoMovimentacao,
+  Raca as PrismaRaca,
+  Parceiro as PrismaParceiro,
+  TipoVacina as PrismaTipoVacina,
+  Animal as PrismaAnimal,
+  Transacao as PrismaTransacao,
+  AgendaVacina as PrismaAgendaVacina,
+  Parcela as PrismaParcela,
+  HistoricoPesagem as PrismaHistoricoPesagem,
+  CotacaoHistorica as PrismaCotacaoHistorica,
+  CicloReprodutivo as PrismaCicloReprodutivo,
+} from "@prisma/client";
 
-export interface HistoricoMovimentacao {
-  id: string;
-  animal_id: string;
-  local_origem_id?: string;
-  local_destino_id?: string;
-  data_movimentacao: string;
-  motivo?: string;
-  created_at: string;
-}
+// Nota sobre campos Decimal: o Prisma Client (ver lib/prisma.ts) converte
+// automaticamente todo Prisma.Decimal para number puro antes do dado sair
+// da camada de acesso a dados. Os tipos gerados pelo Prisma continuam
+// marcando esses campos como Decimal, então os tipos abaixo os sobrescrevem
+// para number — refletindo o que o código realmente recebe em runtime.
+export type Local = Omit<PrismaLocal, "area_hectares"> & {
+  area_hectares: number | null;
+};
+export type HistoricoMovimentacao = PrismaHistoricoMovimentacao;
 
+// Campos "tipo"/"status" são `String` no schema (não enums de banco), então
+// estas uniões documentam os valores que o código realmente grava/lê.
+// Ver app/animais/actions.ts, app/transacoes/actions.ts, app/vacinas/actions.ts, app/parcelas/actions.ts.
 export type Genero = "M" | "F";
 export type OrigemAnimal = "nascido" | "comprado";
-export type StatusAnimal = "ativo" | "vendido" | "morto" | "transferido";
+export type StatusAnimal = "ATIVO" | "VENDIDO" | "MORTO";
 export type TipoParceiro = "comprador" | "vendedor" | "ambos" | "fornecedor_insumo";
 export type TipoTransacao = "compra" | "venda";
 export type StatusTransacao = "pendente" | "finalizada" | "cancelada";
@@ -39,156 +51,50 @@ export type FormaPagamento =
 export type StatusVacina = "pendente" | "aplicada" | "atrasada" | "cancelada";
 export type StatusParcela = "pendente" | "pago" | "atrasado" | "cancelado";
 
-export interface Raca {
-  id: string;
-  nome: string;
-  descricao?: string;
-  created_at: string;
-  updated_at: string;
-}
+export type Raca = PrismaRaca;
+export type Parceiro = PrismaParceiro;
+export type TipoVacina = PrismaTipoVacina;
 
-export interface Parceiro {
-  id: string;
-  nome: string;
-  tipo: TipoParceiro;
-  cpf_cnpj?: string;
-  telefone?: string;
-  email?: string;
-  endereco?: string;
-  observacoes?: string;
-  ativo: boolean;
-  created_at: string;
-  updated_at: string;
-}
+type AnimalBase = Omit<PrismaAnimal, "peso_nascimento" | "peso_atual" | "valor_compra"> & {
+  peso_nascimento: number | null;
+  peso_atual: number | null;
+  valor_compra: number | null;
+};
 
-export interface TipoVacina {
-  id: string;
-  nome: string;
-  descricao?: string;
-  carencia_dias?: number | null;
-  doses_por_ano: number;
-  dias_entre_doses: number;
-  obrigatoria: boolean;
-  apenas_femeas: boolean;
-  dose_unica: boolean;
-  meses_aplicacao: number[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Animal {
-  id: string;
-  brinco?: string;
-  nome?: string;
-  sexo: Genero;
-  data_nascimento?: string;
-  peso_nascimento?: number;
-  peso_atual?: number;
-  origem: OrigemAnimal;
-  status: StatusAnimal;
-  raca_id?: string;
-  mae_id?: string;
-  pai_id?: string;
-  vacina_brucelose: boolean;
-  data_brucelose?: string;
-  compra_id?: string;
-  venda_id?: string;
-  data_status?: string;
-  motivo_morte?: string;
-  observacoes?: string;
-  foto_url?: string;
-  created_at: string;
-  updated_at: string;
-  // Relacionamentos
+export interface Animal extends AnimalBase {
+  // Relacionamentos (presentes apenas quando o `include` correspondente é usado)
   raca?: Raca;
-  mae?: Animal;
-  pai?: Animal;
-  // Local
-  local_id?: string;
-  local?: Local;
+  mae?: Animal | null;
+  pai?: Animal | null;
+  local?: Local | null;
 }
 
-export interface Transacao {
-  id: string;
-  tipo: TipoTransacao;
-  parceiro_id?: string;
-  data_negociacao: string;
-  qtd_parcelas: number;
-  forma_pagamento?: FormaPagamento;
+type TransacaoBase = Omit<PrismaTransacao, "valor_total" | "desconto_carcaca"> & {
   valor_total: number;
-  nota_fiscal_url?: string;
-  gta_url?: string;
-  observacoes?: string;
-  status: StatusTransacao;
-  created_at: string;
-  updated_at: string;
+  desconto_carcaca: number | null;
+};
+
+export interface Transacao extends TransacaoBase {
   // Relacionamentos
-  parceiro?: Parceiro;
-  itens?: ItemTransacao[];
+  parceiro?: Parceiro | null;
   parcelas?: Parcela[];
   animais?: Animal[];
 }
 
-export interface ItemTransacao {
-  id: string;
-  transacao_id: string;
-  valor_unitario: number;
-  quantidade_animais: number;
-  descricao?: string;
-  created_at: string;
-}
-
-export interface AnimaisTransacao {
-  id: string;
-  transacao_id: string;
-  animal_id: string;
-  item_transacao_id?: string;
-  created_at: string;
-}
-
-export interface AgendaVacina {
-  id: string;
-  animal_id: string;
-  tipo_vacina_id: string;
-  data_prevista: string;
-  data_aplicacao?: string;
-  status: StatusVacina;
-  vacina_pai_id?: string;
-  dose_numero: number;
-  observacoes?: string;
-  created_at: string;
-  updated_at: string;
+export interface AgendaVacina extends PrismaAgendaVacina {
   // Relacionamentos
   animal?: Animal;
   tipo_vacina?: TipoVacina;
 }
 
-export interface Parcela {
-  id: string;
-  transacao_id: string;
-  numero_parcela: number;
-  data_vencimento: string;
-  valor: number;
-  status: StatusParcela;
-  data_pagamento?: string;
-  data_baixa_promissoria?: string;
-  foto_promissoria_frente_url?: string;
-  foto_promissoria_verso_url?: string;
-  observacoes?: string;
-  created_at: string;
-  updated_at: string;
+type ParcelaBase = Omit<PrismaParcela, "valor"> & { valor: number };
+
+export interface Parcela extends ParcelaBase {
   // Relacionamentos
   transacao?: Transacao;
 }
 
-export interface HistoricoPesagem {
-  id: string;
-  animal_id: string;
-  peso: number;
-  data_pesagem: string;
-  observacoes?: string;
-  created_at: string;
-}
+export type HistoricoPesagem = Omit<PrismaHistoricoPesagem, "peso"> & { peso: number };
 
 // Tipos para formulários e estatísticas
 export interface DashboardStats {
@@ -207,14 +113,7 @@ export interface DashboardStats {
   valorAPagar: number;
 }
 
-export interface CotacaoHistorica {
-  id: string;
-  data: string;
-  valor: number;
-  tipo: string;
-  fonte?: string;
-  unidade?: string;
-}
+export type CotacaoHistorica = Omit<PrismaCotacaoHistorica, "valor"> & { valor: number };
 
 export type TipoCotacao = "boi_gordo" | "bezerro" | "vaca" | "milho";
 
@@ -255,8 +154,6 @@ export interface AnimalFormData {
   raca_id?: string;
   mae_id?: string;
   pai_id?: string;
-  vacina_brucelose?: boolean;
-  data_brucelose?: string;
   observacoes?: string;
 }
 
@@ -281,22 +178,8 @@ export type StatusReprodutivo =
   | "lactacao"
   | "aguardando_diagnostico";
 
-export interface CicloReprodutivo {
-  id: string;
-  animal_id: string;
-  data_ultimo_parto?: string;
-  data_ultimo_cio?: string;
-  data_cobertura?: string;
-  tipo_cobertura: "monta_natural" | "inseminacao";
-  touro_id?: string;
-  data_prevista_parto?: string;
-  data_prevista_cio?: string;
-  data_diagnostico_gestacao?: string;
-  status: StatusReprodutivo;
-  observacoes?: string;
-  ativo: boolean;
-  created_at: string;
-  // Join fields
+export interface CicloReprodutivo extends PrismaCicloReprodutivo {
+  // Relacionamentos
   animal?: Animal;
-  touro?: Animal;
+  touro?: Animal | null;
 }

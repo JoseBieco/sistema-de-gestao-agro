@@ -65,7 +65,7 @@ export function ReproductionPageClient({
     (c) => c.status === "vazia" || c.status === "lactacao"
   );
 
-  function getDaysToDate(dateStr?: string) {
+  function getDaysToDate(dateStr?: string | Date | null) {
     if (!dateStr) return null;
     return differenceInDays(new Date(dateStr), new Date());
   }

@@ -3,11 +3,16 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 
+// Produtos sanitários são itens de estoque com categoria "SANITARIO" (ver
+// prisma/schema.prisma ItemEstoque — o mesmo cadastro/Kardex é compartilhado
+// com o módulo de insumos, que usa categoria "INSUMO").
+
 // --- Produtos Sanitários (CRUD) ---
 
 export async function getProdutosSanitarios() {
   try {
-    return await prisma.produtoSanitario.findMany({
+    return await prisma.itemEstoque.findMany({
+      where: { categoria: "SANITARIO" },
       orderBy: { nome: "asc" }
     })
   } catch (error) {
@@ -18,7 +23,7 @@ export async function getProdutosSanitarios() {
 
 export async function getProdutoSanitarioById(id: string) {
   try {
-    return await prisma.produtoSanitario.findUnique({
+    return await prisma.itemEstoque.findUnique({
       where: { id }
     })
   } catch (error) {
@@ -35,11 +40,12 @@ export async function createProdutoSanitario(data: {
   indicacao?: string
 }) {
   try {
-    const produto = await prisma.produtoSanitario.create({
+    const produto = await prisma.itemEstoque.create({
       data: {
+        categoria: "SANITARIO",
         nome: data.nome,
         tipo: data.tipo,
-        quantidade_estoque: data.quantidade_estoque,
+        estoque_atual: data.quantidade_estoque,
         unidade_medida: data.unidade_medida,
         indicacao: data.indicacao
       }
@@ -47,9 +53,9 @@ export async function createProdutoSanitario(data: {
 
     // Registra a movimentação inicial se houver quantidade > 0
     if (data.quantidade_estoque > 0) {
-      await prisma.movimentacaoEstoqueSanitario.create({
+      await prisma.movimentacaoEstoque.create({
         data: {
-          produto_id: produto.id,
+          item_id: produto.id,
           tipo_transacao: "ENTRADA",
           quantidade: data.quantidade_estoque,
           observacoes: "Estoque inicial"
@@ -72,7 +78,7 @@ export async function updateProdutoSanitario(id: string, data: {
   indicacao?: string
 }) {
   try {
-    const produto = await prisma.produtoSanitario.update({
+    const produto = await prisma.itemEstoque.update({
       where: { id },
       data: {
         nome: data.nome,
@@ -91,7 +97,7 @@ export async function updateProdutoSanitario(id: string, data: {
 
 export async function deleteProdutoSanitario(id: string) {
   try {
-    await prisma.produtoSanitario.delete({
+    await prisma.itemEstoque.delete({
       where: { id }
     })
     revalidatePath("/sanitario/estoque")
@@ -106,8 +112,8 @@ export async function deleteProdutoSanitario(id: string) {
 
 export async function getMovimentacoesProduto(produtoId: string) {
   try {
-    return await prisma.movimentacaoEstoqueSanitario.findMany({
-      where: { produto_id: produtoId },
+    return await prisma.movimentacaoEstoque.findMany({
+      where: { item_id: produtoId },
       orderBy: { data_transacao: "desc" }
     })
   } catch (error) {
@@ -123,25 +129,28 @@ export async function registrarMovimentacaoSanitaria(data: {
   observacoes?: string
 }) {
   try {
+    if (!data.produto_id) {
+      return { success: false, error: "Produto é obrigatório." }
+    }
+    if (!Number.isFinite(data.quantidade) || (data.tipo_transacao !== "AJUSTE" && data.quantidade <= 0)) {
+      return { success: false, error: "Quantidade inválida." }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      // Cria a movimentação
-      const mov = await tx.movimentacaoEstoqueSanitario.create({
-        data: {
-          produto_id: data.produto_id,
-          tipo_transacao: data.tipo_transacao,
-          quantidade: data.quantidade,
-          observacoes: data.observacoes
-        }
-      })
+      // Trava a linha do item para evitar leitura-e-escrita concorrente
+      // (duas movimentações simultâneas não podem calcular o novo saldo a partir
+      // do mesmo valor "antigo").
+      // Observação: estoque_atual é numeric(12,3) no Postgres, e o driver
+      // pg devolve colunas numeric como string (para não perder precisão) —
+      // diferente do restante do app, essa consulta não passa pela extensão do
+      // Prisma Client que converte Decimal -> number, então convertemos aqui.
+      const [item] = await tx.$queryRaw<{ estoque_atual: string }[]>`
+        SELECT estoque_atual FROM itens_estoque WHERE id = ${data.produto_id} FOR UPDATE
+      `
 
-      // Atualiza o total do estoque
-      const produto = await tx.produtoSanitario.findUnique({
-        where: { id: data.produto_id }
-      })
+      if (!item) throw new Error("Produto não encontrado")
 
-      if (!produto) throw new Error("Produto não encontrado")
-
-      let novoEstoque = produto.quantidade_estoque
+      let novoEstoque = Number(item.estoque_atual)
       if (data.tipo_transacao === "ENTRADA") {
         novoEstoque += data.quantidade
       } else if (data.tipo_transacao === "SAIDA") {
@@ -150,9 +159,23 @@ export async function registrarMovimentacaoSanitaria(data: {
         novoEstoque = data.quantidade // Para ajuste, a quantidade enviada pode ser o novo total
       }
 
-      await tx.produtoSanitario.update({
+      if (novoEstoque < 0) {
+        throw new Error("Estoque insuficiente para essa saída.")
+      }
+
+      // Cria a movimentação
+      const mov = await tx.movimentacaoEstoque.create({
+        data: {
+          item_id: data.produto_id,
+          tipo_transacao: data.tipo_transacao,
+          quantidade: data.quantidade,
+          observacoes: data.observacoes
+        }
+      })
+
+      await tx.itemEstoque.update({
         where: { id: data.produto_id },
-        data: { quantidade_estoque: novoEstoque }
+        data: { estoque_atual: novoEstoque }
       })
 
       return mov
@@ -162,6 +185,9 @@ export async function registrarMovimentacaoSanitaria(data: {
     return { success: true, data: result }
   } catch (error) {
     console.error("Erro ao registrar movimentação:", error)
-    return { success: false, error: "Falha ao registrar movimentação." }
+    const message = error instanceof Error && error.message === "Estoque insuficiente para essa saída."
+      ? error.message
+      : "Falha ao registrar movimentação."
+    return { success: false, error: message }
   }
 }

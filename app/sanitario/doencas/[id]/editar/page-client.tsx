@@ -42,7 +42,7 @@ export function EditarDoencaClient({ ocorrencia, produtos }: { ocorrencia: any, 
     nome: ocorrencia.nome,
     descricao: ocorrencia.descricao || "",
     produtos: ocorrencia.produtos_indicados.map((p: any) => ({
-      produto_id: p.produto_id,
+      produto_id: p.item_id,
       observacoes: p.observacoes || "",
       dosagens: p.dosagens.map((d: any) => ({
         nome_faixa: d.nome_faixa,

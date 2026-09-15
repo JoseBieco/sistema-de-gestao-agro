@@ -202,7 +202,7 @@ export function WeightHistory({
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                        {record.observacoes || "-"}
+                        {record.observacao || "-"}
                       </TableCell>
                     </TableRow>
                   ))

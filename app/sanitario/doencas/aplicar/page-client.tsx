@@ -40,13 +40,13 @@ export function AplicarTratamentoClient({ animais, ocorrencias }: { animais: any
     const produtosAplicados: { produto_id: string, quantidade: number }[] = []
     
     for (const pi of ocorrenciaAtual.produtos_indicados) {
-      const qtd = dosagensSelecionadas[pi.produto_id]
+      const qtd = dosagensSelecionadas[pi.item_id]
       if (qtd === undefined) {
         toast.error(`Selecione uma dosagem para o produto: ${pi.produto.nome}`)
         return
       }
       produtosAplicados.push({
-        produto_id: pi.produto_id,
+        produto_id: pi.item_id,
         quantidade: qtd
       })
     }
@@ -132,7 +132,7 @@ export function AplicarTratamentoClient({ animais, ocorrencias }: { animais: any
                           <div>
                             <span className="font-medium">{pi.produto.nome}</span>
                             <span className="text-xs ml-2 px-2 py-0.5 bg-secondary text-secondary-foreground rounded-full">
-                              Estoque Atual: {pi.produto.quantidade_estoque} {pi.produto.unidade_medida}
+                              Estoque Atual: {pi.produto.estoque_atual} {pi.produto.unidade_medida}
                             </span>
                           </div>
                           {pi.observacoes && (
@@ -144,7 +144,7 @@ export function AplicarTratamentoClient({ animais, ocorrencias }: { animais: any
                           <Label className="text-sm mb-2 block">Selecione a Dosagem:</Label>
                           <div className="flex flex-wrap gap-2">
                             {pi.dosagens.map((d: any) => {
-                              const isSelected = dosagensSelecionadas[pi.produto_id] === d.quantidade;
+                              const isSelected = dosagensSelecionadas[pi.item_id] === d.quantidade;
                               return (
                                 <Button
                                   key={d.id}
@@ -153,7 +153,7 @@ export function AplicarTratamentoClient({ animais, ocorrencias }: { animais: any
                                   size="sm"
                                   onClick={() => setDosagensSelecionadas({
                                     ...dosagensSelecionadas,
-                                    [pi.produto_id]: d.quantidade
+                                    [pi.item_id]: d.quantidade
                                   })}
                                 >
                                   {d.nome_faixa}: {d.quantidade} {pi.produto.unidade_medida}

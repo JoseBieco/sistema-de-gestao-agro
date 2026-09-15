@@ -23,7 +23,7 @@ export function InsumoCompraEditClient({ initialData, insumos, fornecedores }: {
   })
 
   const [itens, setItens] = useState(initialData.itens.map((i: any) => ({
-    insumo_id: i.insumo_id,
+    insumo_id: i.item_id,
     quantidade_compra: i.quantidade_compra,
     unidade_compra: i.unidade_compra,
     fator_conversao: i.fator_conversao,
@@ -236,7 +236,7 @@ export function InsumoCompraEditClient({ initialData, insumos, fornecedores }: {
                   >
                     <option value="">Selecione...</option>
                     {insumos.map(i => (
-                      <option key={i.id} value={i.id}>{i.nome} (Base: {i.unidade_base})</option>
+                      <option key={i.id} value={i.id}>{i.nome} (Base: {i.unidade_medida})</option>
                     ))}
                   </select>
                 </div>

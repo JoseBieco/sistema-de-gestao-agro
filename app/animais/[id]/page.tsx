@@ -237,37 +237,6 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
                 )}
               </div>
 
-              {/* BRUCELOSE (Apenas Fêmeas) */}
-              {animalData.sexo === "F" && (
-                <div className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        Brucelose
-                      </p>
-                      <Badge
-                        variant={
-                          animalData.vacina_brucelose ? "default" : "secondary"
-                        }
-                      >
-                        {animalData.vacina_brucelose
-                          ? "Vacinada"
-                          : "Não vacinada"}
-                      </Badge>
-                    </div>
-                    {animalData.data_brucelose && (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          Data da vacina
-                        </p>
-                        <p className="text-sm font-medium">
-                          {formatDate(animalData.data_brucelose)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -320,7 +289,7 @@ export default async function AnimalPage({ params }: AnimalPageProps) {
             <CardContent>
               {vacinas && vacinas.length > 0 ? (
                 <div className="space-y-2">
-                  {vacinas.map((v) => (
+                  {vacinas.map((v: any) => (
                     <div
                       key={v.id}
                       className="flex items-center justify-between rounded-lg border p-3"

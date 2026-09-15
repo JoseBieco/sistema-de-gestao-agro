@@ -62,7 +62,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
 
     if (racasRes) setRacas(racasRes);
     if (animaisRes) {
-      setAnimais(animaisRes.filter((a: any) => a.status !== "morto" && a.status !== "vendido"));
+      setAnimais(animaisRes.filter((a: any) => a.status?.toUpperCase() !== "MORTO" && a.status?.toUpperCase() !== "VENDIDO"));
     }
   }
 

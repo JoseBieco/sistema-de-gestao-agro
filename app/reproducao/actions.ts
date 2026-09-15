@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { CicloReprodutivoService } from "@/src/core/services/CicloReprodutivoService";
 import { revalidatePath } from "next/cache";
 
@@ -22,8 +24,8 @@ export async function createCiclo(data: any) {
     });
     revalidatePath("/reproducao");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -40,8 +42,8 @@ export async function updateCiclo(id: string, data: any) {
     });
     revalidatePath("/reproducao");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -50,7 +52,7 @@ export async function deleteCiclo(id: string) {
     await cicloService.delete(id);
     revalidatePath("/reproducao");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

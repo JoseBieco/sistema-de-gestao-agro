@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state"
 import type { Transacao, TipoTransacao, Parceiro, Parcela } from "@/lib/types/database"
 
 type TransacaoExtended = Transacao & {
-  parceiro?: Parceiro
+  parceiro?: Parceiro | null
   parcelas?: Parcela[]
 }
 

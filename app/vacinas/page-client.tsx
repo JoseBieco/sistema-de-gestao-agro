@@ -41,9 +41,10 @@ export function AgendaPageClient({ initialAgenda }: AgendaPageClientProps) {
   }
 
   // Update status of overdue vaccines
-  const today = new Date().toISOString().split("T")[0]
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
   const processedAgenda = agenda.map((v) => {
-    if (v.status === "pendente" && v.data_prevista < today) {
+    if (v.status === "pendente" && new Date(v.data_prevista) < today) {
       return { ...v, status: "atrasada" as const }
     }
     return v

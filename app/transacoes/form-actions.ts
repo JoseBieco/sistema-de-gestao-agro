@@ -13,6 +13,6 @@ export async function getTransactionFormData(tipo: string) {
   return {
     parceiros: parceiros.filter(p => p.ativo && (p.tipo === parceiroTipo || p.tipo === "ambos")),
     animais: animais.filter(a => a.status?.toLowerCase() === "ativo"),
-    desconto_carcaca: fazenda?.desconto_carcaca ?? 50
+    desconto_carcaca: fazenda?.desconto_carcaca !== null && fazenda?.desconto_carcaca !== undefined ? Number(fazenda.desconto_carcaca) : 50
   }
 }

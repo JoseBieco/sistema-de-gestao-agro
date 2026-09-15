@@ -26,7 +26,7 @@ export default async function DashboardPage() {
       data_negociacao: { gte: startOfMonth },
     },
   });
-  const vendasMes = vendasMesData._sum.valor_total || 0;
+  const vendasMes = Number(vendasMesData._sum.valor_total) || 0;
 
   // Vacinas Pendentes (Próximos 30 dias)
   const vacinasPendentes = await prisma.agendaVacina.count({
@@ -57,13 +57,13 @@ export default async function DashboardPage() {
   let aPagar = 0;
 
   transacoesAno.forEach((t) => {
-    if (t.tipo === "venda") receitas += t.valor_total;
-    if (t.tipo === "compra") despesas += t.valor_total;
+    if (t.tipo === "venda") receitas += Number(t.valor_total);
+    if (t.tipo === "compra") despesas += Number(t.valor_total);
 
     t.parcelas.forEach((p) => {
       if (p.status === "pendente" || p.status === "atrasado") {
-        if (t.tipo === "venda") aReceber += p.valor;
-        if (t.tipo === "compra") aPagar += p.valor;
+        if (t.tipo === "venda") aReceber += Number(p.valor);
+        if (t.tipo === "compra") aPagar += Number(p.valor);
       }
     });
   });

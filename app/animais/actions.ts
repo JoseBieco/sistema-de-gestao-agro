@@ -1,5 +1,6 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
 import { AnimalService } from "@/src/core/services/AnimalService";
 import { revalidatePath } from "next/cache";
 
@@ -22,8 +23,8 @@ export async function createAnimal(data: any) {
     const result = await animalService.createAnimal(data);
     revalidatePath("/animais");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -33,8 +34,8 @@ export async function updateAnimal(id: string, data: any) {
     revalidatePath("/animais");
     revalidatePath(`/animais/${id}`);
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -43,8 +44,8 @@ export async function deleteAnimal(id: string) {
     await animalService.deleteAnimal(id);
     revalidatePath("/animais");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -89,7 +90,7 @@ export async function addAnimalWeight(payload: {
     revalidatePath(`/animais/${payload.animal_id}`);
     revalidatePath("/animais");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

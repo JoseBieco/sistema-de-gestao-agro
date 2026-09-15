@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -12,7 +11,8 @@ model Raca {
   nome       String
   descricao  String?
   created_at DateTime  @default(now())
-  
+  updated_at DateTime  @default(now()) @updatedAt
+
   animais    Animal[]
 
   @@map("racas")
@@ -22,11 +22,12 @@ model Local {
   id         String    @id @default(uuid())
   nome       String
   tipo       String    // pasto, piquete, curral, confinamento
-  area_hectares Float?
+  area_hectares Decimal? @db.Decimal(10, 2)
   capacidade_maxima Int?
   observacoes String?
   created_at DateTime  @default(now())
-  
+  updated_at DateTime  @default(now()) @updatedAt
+
   animais    Animal[]  @relation("LocalAnimais")
   movimentos_origem  HistoricoMovimentacao[] @relation("LocalOrigem")
   movimentos_destino HistoricoMovimentacao[] @relation("LocalDestino")
@@ -39,7 +40,7 @@ model Parcela {
   transacao_id            String
   numero_parcela          Int
   data_vencimento         DateTime
-  valor                   Float
+  valor                   Decimal   @db.Decimal(12, 2)
   status                  String    @default("pendente")
   data_pagamento          DateTime?
   data_baixa_promissoria  DateTime?
@@ -47,6 +48,7 @@ model Parcela {
   foto_promissoria_verso_url  String?
   observacoes             String?
   created_at              DateTime  @default(now())
+  updated_at              DateTime  @default(now()) @updatedAt
 
   transacao               Transacao @relation(fields: [transacao_id], references: [id], onDelete: Cascade)
 
@@ -64,6 +66,7 @@ model Parceiro {
   observacoes String?
   ativo      Boolean   @default(true)
   created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
 
   transacoes Transacao[]
   compras    Animal[]  @relation("Comprador")
@@ -81,22 +84,23 @@ model Animal {
   sexo           String
   origem         String    @default("nascido") // nascido, comprado
   data_nascimento DateTime?
-  peso_nascimento Float?
-  peso_atual     Float?
+  peso_nascimento Decimal? @db.Decimal(10, 3)
+  peso_atual     Decimal?  @db.Decimal(10, 3)
   status         String    @default("ATIVO") // ATIVO, VENDIDO, MORTO
   data_status    DateTime?
   motivo_morte   String?
   local_id       String?
   mae_id         String?
   pai_id         String?
-  
+
   // Controle financeiro
-  valor_compra   Float?
+  valor_compra   Decimal?  @db.Decimal(12, 2)
   comprador_id   String?
   vendedor_id    String?
 
   observacoes    String?
   created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
 
   raca           Raca      @relation(fields: [raca_id], references: [id])
   local          Local?    @relation("LocalAnimais", fields: [local_id], references: [id])
@@ -104,7 +108,7 @@ model Animal {
   pai            Animal?   @relation("PaiFilhos", fields: [pai_id], references: [id])
   filhos_mae     Animal[]  @relation("MaeFilhos")
   filhos_pai     Animal[]  @relation("PaiFilhos")
-  
+
   comprador      Parceiro? @relation("Comprador", fields: [comprador_id], references: [id])
   vendedor       Parceiro? @relation("Vendedor", fields: [vendedor_id], references: [id])
 
@@ -132,6 +136,7 @@ model TipoVacina {
   dose_unica       Boolean  @default(false)
   meses_aplicacao  Int[]
   created_at       DateTime @default(now())
+  updated_at       DateTime @default(now()) @updatedAt
 
   agendas    AgendaVacina[]
 
@@ -144,11 +149,13 @@ model AgendaVacina {
   tipo_vacina_id String
   data_prevista  DateTime
   data_aplicacao DateTime?
-  status         String    @default("PENDENTE") // PENDENTE, APLICADA, CANCELADA
+  // Valores usados pela aplicação: "pendente", "aplicada", "cancelada" (minúsculo).
+  status         String    @default("pendente")
   observacoes    String?
   dose_numero    Int       @default(1)
   vacina_pai_id  String?
   created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
 
   animal         Animal     @relation(fields: [animal_id], references: [id])
   tipo_vacina    TipoVacina @relation(fields: [tipo_vacina_id], references: [id])
@@ -171,6 +178,7 @@ model CicloReprodutivo {
   observacoes    String?
   ativo          Boolean   @default(true)
   created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
 
   animal         Animal    @relation("FemeaCiclo", fields: [animal_id], references: [id])
   touro          Animal?   @relation("ReprodutorCiclo", fields: [touro_id], references: [id])
@@ -185,13 +193,14 @@ model Transacao {
   data_negociacao  DateTime
   qtd_parcelas     Int       @default(1)
   forma_pagamento  String?
-  valor_total      Float
+  valor_total      Decimal   @db.Decimal(12, 2)
   nota_fiscal_url  String?
   gta_url          String?
   observacoes      String?
-  desconto_carcaca Float?
+  desconto_carcaca Decimal?  @db.Decimal(5, 2)
   status           String    @default("pendente") // pendente, finalizada, cancelada
   created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
 
   parceiro         Parceiro? @relation(fields: [parceiro_id], references: [id])
   parcelas         Parcela[]
@@ -206,10 +215,10 @@ model TransacaoGrupo {
   transacao_id       String
   nome               String
   tipo_medida        String    // arroba, kilo
-  valor_unidade      Float
+  valor_unidade      Decimal   @db.Decimal(12, 2)
   quantidade_animais Int
-  peso_total         Float
-  valor_calculado    Float
+  peso_total         Decimal   @db.Decimal(10, 3)
+  valor_calculado    Decimal   @db.Decimal(12, 2)
   created_at         DateTime  @default(now())
 
   transacao          Transacao @relation(fields: [transacao_id], references: [id], onDelete: Cascade)
@@ -237,7 +246,7 @@ model HistoricoMovimentacao {
 model HistoricoPesagem {
   id           String    @id @default(uuid())
   animal_id    String
-  peso         Float
+  peso         Decimal   @db.Decimal(10, 3)
   data_pesagem DateTime
   observacao   String?
   created_at   DateTime  @default(now())
@@ -251,8 +260,12 @@ model CotacaoHistorica {
   id              String    @id @default(uuid())
   data            DateTime
   produto         String    // boi_gordo, milho, soja
-  valor           Float
-  estado          String?
+  valor           Decimal   @db.Decimal(12, 2)
+  // Obrigatório (com default) porque compõe a chave de unicidade abaixo:
+  // no Postgres, valores NULL não colidem entre si em @@unique, então um
+  // "estado" opcional deixava a constraint de não repetir cotação por
+  // dia/produto/estado furável. O código sempre envia um valor (default "SP").
+  estado          String    @default("SP")
   unidade_medida  String?   // ex: "@", "kg", "sc"
   fonte           String?   // ex: "AgroDoc AI"
   data_coleta     DateTime? @default(now())
@@ -269,7 +282,7 @@ model Fazenda {
   endereco   String?
   cidade     String?
   estado     String?
-  desconto_carcaca Float? @default(50)
+  desconto_carcaca Decimal? @db.Decimal(5, 2) @default(50)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -280,19 +293,35 @@ model Fazenda {
 // MÓDULO DE NUTRIÇÃO E ESTOQUE DE INSUMOS
 // ==========================================
 
-model Insumo {
+// ==========================================
+// ESTOQUE UNIFICADO (Insumos de nutrição + Produtos sanitários)
+//
+// Um único cadastro de "item de estoque" e um único Kardex, distinguidos
+// pelo campo `categoria` ("INSUMO" | "SANITARIO"). Antes eram dois módulos
+// praticamente idênticos duplicados (Insumo/MovimentacaoEstoque de um lado,
+// ProdutoSanitario/MovimentacaoEstoqueSanitario do outro) — unificados aqui
+// para não precisar duplicar de novo se surgir um terceiro tipo de estoque.
+// `tipo` e `indicacao` só fazem sentido para categoria SANITARIO.
+// ==========================================
+
+model ItemEstoque {
   id              String   @id @default(uuid())
+  categoria       String   // INSUMO, SANITARIO
   nome            String
-  unidade_base    String   // Ex: kg, litro
+  tipo            String?  // "REMEDIO" ou "VACINA" (apenas categoria SANITARIO)
+  unidade_medida  String   // Ex: kg, litro, ml, dose, frasco
+  indicacao       String?  // Para que serve (apenas categoria SANITARIO)
+  estoque_atual   Decimal  @default(0) @db.Decimal(12, 3)
   descricao       String?
-  estoque_em_cache Float   @default(0)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
-  compras_itens   InsumoCompraItem[]
-  movimentacoes   MovimentacaoEstoque[]
+  compras_itens          InsumoCompraItem[]
+  movimentacoes          MovimentacaoEstoque[]
+  ocorrencias_vinculadas OcorrenciaProduto[]
+  tratamentos_aplicados  TratamentoAplicadoProduto[]
 
-  @@map("insumos")
+  @@map("itens_estoque")
 }
 
 model InsumoCompra {
@@ -302,10 +331,10 @@ model InsumoCompra {
   data_prevista_entrega    DateTime?
   status_pagamento         String   @default("PENDENTE") // PENDENTE, PARCIAL, PAGO
   status_entrega           String   @default("PENDENTE") // PENDENTE, PARCIALMENTE_ENTREGUE, ENTREGUE
-  valor_itens              Float
-  valor_frete              Float    @default(0)
-  valor_outros_custos      Float    @default(0)
-  valor_total              Float
+  valor_itens              Decimal  @db.Decimal(12, 2)
+  valor_frete              Decimal  @default(0) @db.Decimal(12, 2)
+  valor_outros_custos      Decimal  @default(0) @db.Decimal(12, 2)
+  valor_total              Decimal  @db.Decimal(12, 2)
   observacoes              String?
   created_at               DateTime @default(now())
   updated_at               DateTime @updatedAt
@@ -321,17 +350,17 @@ model InsumoCompra {
 model InsumoCompraItem {
   id                 String   @id @default(uuid())
   insumo_compra_id   String
-  insumo_id          String
-  quantidade_compra  Float
+  item_id            String
+  quantidade_compra  Decimal  @db.Decimal(12, 3)
   unidade_compra     String   // Ex: Tonelada, Saca 50kg
-  fator_conversao    Float    // Fator para converter em unidade_base
-  valor_unitario     Float
-  valor_total        Float
+  fator_conversao    Decimal  @db.Decimal(12, 4) // Fator para converter em unidade_base
+  valor_unitario     Decimal  @db.Decimal(12, 4)
+  valor_total        Decimal  @db.Decimal(12, 2)
   numero_lote        String?
   data_validade      DateTime?
 
   compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
-  insumo             Insumo       @relation(fields: [insumo_id], references: [id])
+  insumo             ItemEstoque  @relation(fields: [item_id], references: [id])
   itens_recebidos    RomaneioItem[]
 
   @@map("insumos_compras_itens")
@@ -343,11 +372,12 @@ model InsumoParcela {
   numero_parcela     Int
   data_vencimento    DateTime
   data_pagamento     DateTime?
-  valor              Float
+  valor              Decimal  @db.Decimal(12, 2)
   forma_pagamento    String?
   status             String   @default("PENDENTE") // PENDENTE, PAGO, ATRASADO
   observacoes        String?
   created_at         DateTime @default(now())
+  updated_at         DateTime @default(now()) @updatedAt
 
   compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
 
@@ -372,7 +402,7 @@ model RomaneioItem {
   id                    String   @id @default(uuid())
   romaneio_entrega_id   String
   insumo_compra_item_id String
-  quantidade_entregue   Float    // Na unidade de compra
+  quantidade_entregue   Decimal  @db.Decimal(12, 3) // Na unidade de compra
   numero_lote           String?
   data_validade         DateTime?
 
@@ -384,55 +414,27 @@ model RomaneioItem {
 
 model MovimentacaoEstoque {
   id                 String   @id @default(uuid())
-  insumo_id          String
-  tipo_transacao     String   // ENTRADA_COMPRA, SAIDA_CONSUMO, AJUSTE_INVENTARIO, PERDA_VALIDADE
-  quantidade         Float    // Na unidade_base
+  item_id            String
+  // Vocabulário depende da categoria do item (ver ItemEstoque.categoria):
+  // INSUMO usa ENTRADA_COMPRA, SAIDA_CONSUMO, AJUSTE_INVENTARIO, PERDA_VALIDADE;
+  // SANITARIO usa ENTRADA, SAIDA, AJUSTE.
+  tipo_transacao     String
+  quantidade         Decimal  @db.Decimal(12, 3) // Na unidade_medida do item
   data_transacao     DateTime @default(now())
-  referencia_id      String?  // Ex: ID do RomaneioItem ou registro de consumo
+  referencia_id      String?  // Ex: ID do RomaneioItem ou registro de consumo (uso do lado INSUMO)
   numero_lote        String?
   data_validade      DateTime?
-  custo_por_unidade  Float?   // Custo real com frete rateado
+  custo_por_unidade  Decimal? @db.Decimal(12, 4) // Custo real com frete rateado (uso do lado INSUMO)
   observacoes        String?
 
-  insumo             Insumo   @relation(fields: [insumo_id], references: [id])
+  item               ItemEstoque @relation(fields: [item_id], references: [id])
 
   @@map("movimentacao_estoque")
 }
 
 // ==========================================
-// MÓDULO SANITÁRIO (Estoque e Livro de Doenças)
+// MÓDULO SANITÁRIO (Livro de Doenças)
 // ==========================================
-
-model ProdutoSanitario {
-  id                 String   @id @default(uuid())
-  nome               String
-  tipo               String   // "REMEDIO" ou "VACINA"
-  quantidade_estoque Float    @default(0)
-  unidade_medida     String   // Ex: ml, dose, frasco
-  indicacao          String?  // Para que serve
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
-
-  ocorrencias_vinculadas OcorrenciaProduto[]
-  movimentacoes          MovimentacaoEstoqueSanitario[]
-  tratamentos_aplicados  TratamentoAplicadoProduto[]
-
-  @@map("produtos_sanitarios")
-}
-
-model MovimentacaoEstoqueSanitario {
-  id                 String   @id @default(uuid())
-  produto_id         String
-  tipo_transacao     String   // ENTRADA, SAIDA, AJUSTE
-  quantidade         Float
-  data_transacao     DateTime @default(now())
-  observacoes        String?
-  created_at         DateTime @default(now())
-
-  produto            ProdutoSanitario @relation(fields: [produto_id], references: [id])
-
-  @@map("movimentacao_estoque_sanitario")
-}
 
 model OcorrenciaSanitaria {
   id                 String   @id @default(uuid())
@@ -450,13 +452,13 @@ model OcorrenciaSanitaria {
 model OcorrenciaProduto {
   id                 String   @id @default(uuid())
   ocorrencia_id      String
-  produto_id         String
+  item_id            String
   observacoes        String?
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
 
   ocorrencia         OcorrenciaSanitaria @relation(fields: [ocorrencia_id], references: [id], onDelete: Cascade)
-  produto            ProdutoSanitario    @relation(fields: [produto_id], references: [id])
+  produto            ItemEstoque         @relation(fields: [item_id], references: [id])
   dosagens           DosagemOcorrencia[]
 
   @@map("ocorrencia_produtos")
@@ -466,7 +468,7 @@ model DosagemOcorrencia {
   id                    String   @id @default(uuid())
   ocorrencia_produto_id String
   nome_faixa            String   // Ex: "Bezerro", "Adulto"
-  quantidade            Float
+  quantidade            Decimal  @db.Decimal(10, 3)
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
 
@@ -494,13 +496,12 @@ model TratamentoAplicado {
 model TratamentoAplicadoProduto {
   id                     String   @id @default(uuid())
   tratamento_aplicado_id String
-  produto_id             String
-  quantidade_aplicada    Float
+  item_id                String
+  quantidade_aplicada    Decimal  @db.Decimal(10, 3)
   created_at             DateTime @default(now())
 
   tratamento_aplicado    TratamentoAplicado @relation(fields: [tratamento_aplicado_id], references: [id], onDelete: Cascade)
-  produto                ProdutoSanitario   @relation(fields: [produto_id], references: [id])
+  produto                ItemEstoque        @relation(fields: [item_id], references: [id])
 
   @@map("tratamentos_aplicados_produtos")
 }
-

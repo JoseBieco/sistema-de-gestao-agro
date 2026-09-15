@@ -134,7 +134,7 @@ export function CotacoesBIClient({ cotacoes }: CotacoesBIProps) {
     const dataMap = new Map<string, Record<string, number | string>>();
 
     filteredCotacoes.forEach((c) => {
-      const dateKey = c.data;
+      const dateKey = new Date(c.data).toISOString().split("T")[0];
       if (!dataMap.has(dateKey)) {
         dataMap.set(dateKey, { date: dateKey });
       }

@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { ParceiroService } from "@/src/core/services/ParceiroService";
 import { revalidatePath } from "next/cache";
 
@@ -18,8 +20,8 @@ export async function createParceiro(data: any) {
     const result = await parceiroService.createParceiro(data);
     revalidatePath("/parceiros");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -28,8 +30,8 @@ export async function updateParceiro(id: string, data: any) {
     const result = await parceiroService.updateParceiro(id, data);
     revalidatePath("/parceiros");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -38,7 +40,7 @@ export async function deleteParceiro(id: string) {
     await parceiroService.deleteParceiro(id);
     revalidatePath("/parceiros");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

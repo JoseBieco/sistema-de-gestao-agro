@@ -1,5 +1,7 @@
 "use server"
 
+import { getErrorMessage } from "@/lib/utils/errors";
+
 import { RacaService } from "@/src/core/services/RacaService";
 import { revalidatePath } from "next/cache";
 
@@ -14,8 +16,8 @@ export async function createRaca(data: any) {
     const result = await racaService.createRaca(data);
     revalidatePath("/racas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -24,8 +26,8 @@ export async function updateRaca(id: string, data: any) {
     const result = await racaService.updateRaca(id, data);
     revalidatePath("/racas");
     return { success: true, data: result };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }
 
@@ -34,7 +36,7 @@ export async function deleteRaca(id: string) {
     await racaService.deleteRaca(id);
     revalidatePath("/racas");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
   }
 }

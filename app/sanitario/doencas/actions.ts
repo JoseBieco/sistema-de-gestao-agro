@@ -64,7 +64,7 @@ export async function createOcorrencia(data: {
         descricao: data.descricao,
         produtos_indicados: {
           create: data.produtos.map(p => ({
-            produto_id: p.produto_id,
+            item_id: p.produto_id,
             observacoes: p.observacoes,
             dosagens: {
               create: p.dosagens.map(d => ({
@@ -112,7 +112,7 @@ export async function updateOcorrencia(id: string, data: {
         await tx.ocorrenciaProduto.create({
           data: {
             ocorrencia_id: id,
-            produto_id: p.produto_id,
+            item_id: p.produto_id,
             observacoes: p.observacoes,
             dosagens: {
               create: p.dosagens.map(d => ({
@@ -167,7 +167,7 @@ export async function aplicarTratamento(data: {
           observacoes: data.observacoes,
           produtos_aplicados: {
             create: data.produtos.map(p => ({
-              produto_id: p.produto_id,
+              item_id: p.produto_id,
               quantidade_aplicada: p.quantidade
             }))
           }
@@ -177,9 +177,9 @@ export async function aplicarTratamento(data: {
       // 2. Para cada produto aplicado, da baixa no estoque
       for (const p of data.produtos) {
         // Registra a saída no histórico
-        await tx.movimentacaoEstoqueSanitario.create({
+        await tx.movimentacaoEstoque.create({
           data: {
-            produto_id: p.produto_id,
+            item_id: p.produto_id,
             tipo_transacao: "SAIDA",
             quantidade: p.quantidade,
             observacoes: `Aplicação de tratamento no animal. Tratamento ID: ${tratamento.id}`
@@ -187,10 +187,10 @@ export async function aplicarTratamento(data: {
         })
 
         // Desconta a quantidade atual do produto
-        await tx.produtoSanitario.update({
+        await tx.itemEstoque.update({
           where: { id: p.produto_id },
           data: {
-            quantidade_estoque: {
+            estoque_atual: {
               decrement: p.quantidade
             }
           }

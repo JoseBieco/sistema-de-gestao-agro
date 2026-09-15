@@ -363,7 +363,7 @@ export function InsumoCompraFormClient({ insumos, fornecedores }: { insumos: any
                             </FormControl>
                             <SelectContent>
                               {insumos.map(i => (
-                                <SelectItem key={i.id} value={i.id}>{i.nome} (Base: {i.unidade_base})</SelectItem>
+                                <SelectItem key={i.id} value={i.id}>{i.nome} (Base: {i.unidade_medida})</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
