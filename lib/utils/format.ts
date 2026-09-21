@@ -38,7 +38,7 @@ export function formatDocument(doc: string): string {
   return doc
 }
 
-export function calcularIdade(dataNascimento: string): string {
+export function calcularIdade(dataNascimento: string | Date): string {
   const nascimento = new Date(dataNascimento)
   const hoje = new Date()
 

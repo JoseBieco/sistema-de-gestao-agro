@@ -52,9 +52,9 @@ import type {
 
 interface RelatoriosClientProps {
   animais: (Animal & { raca?: Raca })[];
-  transacoes: (Transacao & { parceiro?: Parceiro })[];
+  transacoes: (Transacao & { parceiro?: Parceiro | null })[];
   vacinas: (AgendaVacina & { animal?: Animal; tipo_vacina?: TipoVacina })[];
-  parcelas: (Parcela & { transacao?: Transacao & { parceiro?: Parceiro } })[];
+  parcelas: (Parcela & { transacao?: Transacao & { parceiro?: Parceiro | null } })[];
 }
 
 export function RelatoriosClient({
@@ -69,9 +69,9 @@ export function RelatoriosClient({
   const rebanhoStats = {
     total: animais.length,
     ativos: animais.filter((a) => a.status === "ativo").length,
-    machos: animais.filter((a) => a.genero === "M" && a.status === "ativo")
+    machos: animais.filter((a) => a.sexo === "M" && a.status === "ativo")
       .length,
-    femeas: animais.filter((a) => a.genero === "F" && a.status === "ativo")
+    femeas: animais.filter((a) => a.sexo === "F" && a.status === "ativo")
       .length,
     nascidos: animais.filter((a) => a.origem === "nascido").length,
     comprados: animais.filter((a) => a.origem === "comprado").length,
@@ -516,7 +516,7 @@ export function RelatoriosClient({
                     .map((v) => (
                       <TableRow key={v.id}>
                         <TableCell className="font-medium">
-                          {v.animal?.nome || v.animal?.numero_brinco || "-"}
+                          {v.animal?.nome || v.animal?.brinco || "-"}
                         </TableCell>
                         <TableCell>{v.tipo_vacina?.nome || "-"}</TableCell>
                         <TableCell>{formatDate(v.data_prevista)}</TableCell>

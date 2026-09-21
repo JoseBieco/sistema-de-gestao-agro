@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,10 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gestão Pecuária 360",
+  title: "Agro360 Pro",
   description:
     "Sistema completo de gestão agropecuária - Controle de rebanho, sanitário e financeiro",
-  generator: "v0.app",
   keywords: [
     "pecuária",
     "gestão",
@@ -26,15 +25,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
+        // url: "/icon-light-32x32.png",
+        url: "/icon1.png",
         media: "(prefers-color-scheme: light)",
       },
+      // {
+      //   url: "/icon-dark-32x32.png",
+      //   media: "(prefers-color-scheme: dark)",
+      // },
       {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
+        url: "/icon0.svg",
         type: "image/svg+xml",
       },
     ],
@@ -58,7 +58,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
         <Analytics />
-        <Toaster />
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   Dialog,
   DialogContent,
@@ -22,18 +22,25 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+
+
+import { createLocal, updateLocal } from "@/app/locais/actions";
+import type { Local } from "@/lib/types/database";
+import { useEffect } from "react";
+
 interface NewPastureDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  localToEdit?: Local | null;
 }
 
 export function NewPastureDialog({
   open,
   onOpenChange,
   onSuccess,
+  localToEdit,
 }: NewPastureDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
@@ -42,31 +49,48 @@ export function NewPastureDialog({
     capacidade_maxima: "",
   });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.from("locais").insert({
-        nome: formData.nome,
-        tipo: formData.tipo,
-        area_hectares: Number(formData.area_hectares) || 0,
-        capacidade_maxima: Number(formData.capacidade_maxima) || 0,
+  useEffect(() => {
+    if (localToEdit) {
+      setFormData({
+        nome: localToEdit.nome,
+        tipo: localToEdit.tipo || "pasto",
+        area_hectares: localToEdit.area_hectares?.toString() || "",
+        capacidade_maxima: localToEdit.capacidade_maxima?.toString() || "",
       });
-
-      if (error) throw error;
-
-      onSuccess();
-      onOpenChange(false);
+    } else {
       setFormData({
         nome: "",
         tipo: "pasto",
         area_hectares: "",
         capacidade_maxima: "",
       });
-      toast.success("Sucesso ao criar novo local.");
+    }
+  }, [localToEdit, open]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const payload = {
+        nome: formData.nome,
+        tipo: formData.tipo,
+        area_hectares: Number(formData.area_hectares) || null,
+        capacidade_maxima: Number(formData.capacidade_maxima) || null,
+      };
+
+      if (localToEdit) {
+        const res = await updateLocal(localToEdit.id, payload); if (res?.error) { toast.error("Erro: " + res.error); return; }
+        toast.success("Local atualizado com sucesso.");
+      } else {
+        const res = await createLocal(payload); if (res?.error) { toast.error("Erro: " + res.error); return; }
+        toast.success("Sucesso ao criar novo local.");
+      }
+
+      onSuccess();
+      onOpenChange(false);
     } catch (error) {
-      toast.error("Erro ao criar local: " + error);
+      toast.error("Erro ao criar local: : " + (error instanceof Error ? error.message : error));
       console.error("Erro ao criar local:", error);
     } finally {
       setLoading(false);
@@ -77,7 +101,7 @@ export function NewPastureDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Novo Local de Manejo</DialogTitle>
+          <DialogTitle>{localToEdit ? "Editar Local" : "Novo Local de Manejo"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

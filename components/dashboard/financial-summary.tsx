@@ -12,15 +12,7 @@ interface FinancialData {
   aPagar: number
 }
 
-const financialData: FinancialData = {
-  receitas: 125000,
-  despesas: 45000,
-  saldo: 80000,
-  aReceber: 35000,
-  aPagar: 12000,
-}
-
-export function FinancialSummary() {
+export function FinancialSummary({ financialData }: { financialData: FinancialData }) {
   return (
     <Card>
       <CardHeader>

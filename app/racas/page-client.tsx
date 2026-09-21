@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +25,9 @@ import {
 import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import type { Raca } from "@/lib/types/database";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+import { createRaca, updateRaca, deleteRaca, getRacas } from "./actions";
 
 interface RacasPageClientProps {
   initialRacas: Raca[];
@@ -33,9 +35,9 @@ interface RacasPageClientProps {
 
 export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [racas, setRacas] = useState(initialRacas);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteRacaId, setDeleteRacaId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingRaca, setEditingRaca] = useState<Raca | null>(null);
   const [formData, setFormData] = useState({ nome: "", descricao: "" });
@@ -57,24 +59,19 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
 
     try {
       if (editingRaca) {
-        const { error } = await supabase
-          .from("racas")
-          .update(formData)
-          .eq("id", editingRaca.id);
-        if (error) throw error;
-        else toast.success("Sucesso ao editar a raça.");
+        const res = await updateRaca(editingRaca.id, formData); if (res?.error) { toast.error("Erro: " + res.error); return; }
+        toast.success("Sucesso ao editar a raça.");
       } else {
-        const { error } = await supabase.from("racas").insert(formData);
-        if (error) throw error;
-        else toast.success("Sucesso ao criar a raça.");
+        const res = await createRaca(formData); if (res?.error) { toast.error("Erro: " + res.error); return; }
+        toast.success("Sucesso ao criar a raça.");
       }
 
-      const { data } = await supabase.from("racas").select("*").order("nome");
+      const data = await getRacas();
       if (data) setRacas(data);
       setDialogOpen(false);
       router.refresh();
     } catch (error) {
-      toast.error("Erro ao salvar raça:" + error);
+      toast.error("Erro ao salvar raça:: " + (error instanceof Error ? error.message : error));
       console.error("Erro ao salvar raça:", error);
     } finally {
       setLoading(false);
@@ -82,18 +79,21 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir esta raça?")) return;
+    setDeleteRacaId(id);
+  }
 
+  const confirmDeleteRaca = async () => {
+    if (!deleteRacaId) return;
     try {
-      const { error } = await supabase.from("racas").delete().eq("id", id);
-      if (error) throw error;
-      else toast.success("Sucesso ao excluir a raça.");
-
-      setRacas(racas.filter((r) => r.id !== id));
-      router.refresh();
+      const res = await deleteRaca(deleteRacaId);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      toast.success("Raça excluída com sucesso.");
+      const data = await getRacas();
+      if (data) setRacas(data);
     } catch (error) {
-      toast.error("Erro ao excluir raça:" + error);
-      console.error("Erro ao excluir raça:", error);
+      toast.error("Erro ao excluir raça.");
+    } finally {
+      setDeleteRacaId(null);
     }
   }
 
@@ -204,6 +204,7 @@ export function RacasPageClient({ initialRacas }: RacasPageClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog open={!!deleteRacaId} onOpenChange={(v) => !v && setDeleteRacaId(null)} title="Excluir Raça" description="Tem certeza que deseja excluir esta raça?" onConfirm={confirmDeleteRaca} />
     </div>
   );
 }

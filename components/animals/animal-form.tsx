@@ -4,7 +4,6 @@ import type React from "react";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,34 +19,34 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, X } from "lucide-react";
 import type { Animal, Raca, Genero, OrigemAnimal } from "@/lib/types/database";
-import { differenceInMonths, parseISO } from "date-fns";
+import { differenceInMonths } from "date-fns";
 import { toast } from "sonner";
 
+import { getRacas } from "@/app/racas/actions";
+import { getAnimais, createAnimal, updateAnimal } from "@/app/animais/actions";
+
 interface AnimalFormProps {
-  animal?: Animal;
+  animal?: any;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [racas, setRacas] = useState<Raca[]>([]);
-  const [animais, setAnimais] = useState<Animal[]>([]);
+  const [animais, setAnimais] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    numero_brinco: animal?.numero_brinco || "",
+    brinco: animal?.brinco || animal?.brinco || "",
     nome: animal?.nome || "",
-    genero: animal?.genero || ("M" as Genero),
-    data_nascimento: animal?.data_nascimento || "",
+    sexo: animal?.sexo || animal?.sexo || "M",
+    data_nascimento: animal?.data_nascimento ? animal.data_nascimento.toISOString().split('T')[0] : "",
     peso_nascimento: animal?.peso_nascimento?.toString() || "",
-    origem: animal?.origem || ("nascido" as OrigemAnimal),
+    origem: animal?.origem || "nascido",
     raca_id: animal?.raca_id || "default_raca_id",
     mae_id: animal?.mae_id || "default_mae_id",
     pai_id: animal?.pai_id || "default_pai_id",
-    vacina_brucelose: animal?.vacina_brucelose || false,
-    data_brucelose: animal?.data_brucelose || "",
     observacoes: animal?.observacoes || "",
   });
 
@@ -57,16 +56,14 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
 
   async function loadData() {
     const [racasRes, animaisRes] = await Promise.all([
-      supabase.from("racas").select("*").order("nome"),
-      supabase
-        .from("animais")
-        .select("id, numero_brinco, nome, genero, data_nascimento")
-        .neq("status", "morto") // Não listar animais mortos como pais
-        .neq("status", "vendido"), // Opcional: não listar vendidos
+      getRacas(),
+      getAnimais()
     ]);
 
-    if (racasRes.data) setRacas(racasRes.data);
-    if (animaisRes.data) setAnimais(animaisRes.data);
+    if (racasRes) setRacas(racasRes);
+    if (animaisRes) {
+      setAnimais(animaisRes.filter((a: any) => a.status?.toUpperCase() !== "MORTO" && a.status?.toUpperCase() !== "VENDIDO"));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,37 +77,41 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
       };
 
       const data = {
-        ...formData,
+        brinco: formData.brinco,
+        nome: formData.nome,
+        sexo: formData.sexo,
+        origem: formData.origem,
+        observacoes: formData.observacoes,
         peso_nascimento: formData.peso_nascimento
           ? Number.parseFloat(formData.peso_nascimento)
           : null,
         raca_id: cleanId(formData.raca_id),
         mae_id: cleanId(formData.mae_id),
         pai_id: cleanId(formData.pai_id),
-        data_nascimento: formData.data_nascimento || null,
-        data_brucelose: formData.data_brucelose || null,
+        data_nascimento: formData.data_nascimento ? new Date(formData.data_nascimento) : null,
       };
 
       if (animal?.id) {
-        const { error } = await supabase
-          .from("animais")
-          .update(data)
-          .eq("id", animal.id);
-        if (error) throw error;
+        const res = await updateAnimal(animal.id, data);
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
       } else {
-        const { error } = await supabase
-          .from("animais")
-          .insert({ ...data, status: "ativo" });
-        if (error) throw error;
+        const res = await createAnimal({ ...data, status: "ATIVO" });
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
       }
 
       onSuccess?.();
       toast.success("Animal salvo com sucesso!");
       router.push("/animais");
       router.refresh();
-    } catch (error) {
-      console.error("Erro ao salvar animal:", error);
-      toast.error("Erro ao salvar animal:" + error);
+    } catch (error: any) {
+      console.error("Erro interno:", error);
+      toast.error("Erro ao salvar animal: " + (error.message || error));
     } finally {
       setLoading(false);
     }
@@ -134,7 +135,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
     if (candidato.data_nascimento) {
       const idadeMeses = differenceInMonths(
         new Date(),
-        parseISO(candidato.data_nascimento)
+        new Date(candidato.data_nascimento)
       );
       return idadeMeses >= 12; // Mínimo 12 meses para aparecer na lista
     }
@@ -144,10 +145,10 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
   };
 
   const femeas = animais.filter(
-    (a) => a.genero === "F" && isIdadeCompativel(a)
+    (a) => a.sexo === "F" && isIdadeCompativel(a)
   );
   const machos = animais.filter(
-    (a) => a.genero === "M" && isIdadeCompativel(a)
+    (a) => a.sexo === "M" && isIdadeCompativel(a)
   );
 
   return (
@@ -161,12 +162,12 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="numero_brinco">Número do Brinco</Label>
+                <Label htmlFor="brinco">Número do Brinco</Label>
                 <Input
-                  id="numero_brinco"
-                  value={formData.numero_brinco}
+                  id="brinco"
+                  value={formData.brinco}
                   onChange={(e) =>
-                    setFormData({ ...formData, numero_brinco: e.target.value })
+                    setFormData({ ...formData, brinco: e.target.value })
                   }
                   placeholder="Ex: B-2024-001"
                 />
@@ -186,11 +187,11 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="genero">Gênero</Label>
+                <Label htmlFor="sexo">Gênero</Label>
                 <Select
-                  value={formData.genero}
+                  value={formData.sexo}
                   onValueChange={(value: Genero) =>
-                    setFormData({ ...formData, genero: value })
+                    setFormData({ ...formData, sexo: value })
                   }
                 >
                   <SelectTrigger>
@@ -298,7 +299,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
                   <SelectItem value="default_mae_id">Não informado</SelectItem>
                   {femeas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.numero_brinco || a.nome}
+                      {a.brinco || a.nome}
                       {a.data_nascimento &&
                         ` (${new Date(a.data_nascimento).getFullYear()})`}
                     </SelectItem>
@@ -322,7 +323,7 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
                   <SelectItem value="default_pai_id">Não informado</SelectItem>
                   {machos.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.numero_brinco || a.nome}
+                      {a.brinco || a.nome}
                       {a.data_nascimento &&
                         ` (${new Date(a.data_nascimento).getFullYear()})`}
                     </SelectItem>
@@ -331,47 +332,6 @@ export function AnimalForm({ animal, onSuccess, onCancel }: AnimalFormProps) {
               </Select>
             </div>
 
-            {/* Brucelose - Only for females */}
-            {formData.genero === "F" && (
-              <div className="rounded-lg border p-4 space-y-4 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label
-                      htmlFor="vacina_brucelose"
-                      className="text-sm font-medium"
-                    >
-                      Vacina de Brucelose
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Obrigatória para fêmeas de 3 a 8 meses
-                    </p>
-                  </div>
-                  <Switch
-                    id="vacina_brucelose"
-                    checked={formData.vacina_brucelose}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, vacina_brucelose: checked })
-                    }
-                  />
-                </div>
-                {formData.vacina_brucelose && (
-                  <div className="space-y-2">
-                    <Label htmlFor="data_brucelose">Data da Vacinação</Label>
-                    <Input
-                      id="data_brucelose"
-                      type="date"
-                      value={formData.data_brucelose}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          data_brucelose: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações</Label>

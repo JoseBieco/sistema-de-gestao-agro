@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,25 +10,19 @@ import { AnimalsTable } from "@/components/animals/animals-table"
 import { Plus, Beef, Users } from "lucide-react"
 import type { Animal } from "@/lib/types/database"
 
+import { getAnimais } from "./actions"
+
 interface AnimalsPageClientProps {
-  initialAnimals: Animal[]
+  initialAnimals: any[]
 }
 
 export function AnimalsPageClient({ initialAnimals }: AnimalsPageClientProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [animals, setAnimals] = useState(initialAnimals)
   const [activeTab, setActiveTab] = useState("todos")
 
   async function refreshAnimals() {
-    const { data } = await supabase
-      .from("animais")
-      .select(`
-        *,
-        raca:racas(id, nome)
-      `)
-      .order("created_at", { ascending: false })
-
+    const data = await getAnimais()
     if (data) {
       setAnimals(data)
     }
@@ -38,17 +31,17 @@ export function AnimalsPageClient({ initialAnimals }: AnimalsPageClientProps) {
 
   const filteredAnimals = animals.filter((a) => {
     if (activeTab === "todos") return true
-    if (activeTab === "ativos") return a.status === "ativo"
-    if (activeTab === "machos") return a.genero === "M" && a.status === "ativo"
-    if (activeTab === "femeas") return a.genero === "F" && a.status === "ativo"
+    if (activeTab === "ativos") return a.status?.toLowerCase() === "ativo"
+    if (activeTab === "machos") return a.sexo?.toUpperCase() === "M" && a.status?.toLowerCase() === "ativo"
+    if (activeTab === "femeas") return a.sexo?.toUpperCase() === "F" && a.status?.toLowerCase() === "ativo"
     return true
   })
 
   const stats = {
     total: animals.length,
-    ativos: animals.filter((a) => a.status === "ativo").length,
-    machos: animals.filter((a) => a.genero === "M" && a.status === "ativo").length,
-    femeas: animals.filter((a) => a.genero === "F" && a.status === "ativo").length,
+    ativos: animals.filter((a) => a.status?.toLowerCase() === "ativo").length,
+    machos: animals.filter((a) => a.sexo?.toUpperCase() === "M" && a.status?.toLowerCase() === "ativo").length,
+    femeas: animals.filter((a) => a.sexo?.toUpperCase() === "F" && a.status?.toLowerCase() === "ativo").length,
   }
 
   return (

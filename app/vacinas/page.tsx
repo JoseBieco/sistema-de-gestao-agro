@@ -1,15 +1,18 @@
-import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/layout/app-shell"
-import { VacinasPageClient } from "./page-client"
+import { AgendaPageClient } from "./page-client"
+import { getAgendas } from "@/app/vacinas/actions"
+import type { AgendaVacina, Animal, TipoVacina } from "@/lib/types/database"
 
-export default async function VacinasPage() {
-  const supabase = await createClient()
-
-  const { data: tiposVacina } = await supabase.from("tipos_vacina").select("*").order("nome")
+export default async function AgendaPage() {
+  const agendaVacinas = await getAgendas()
 
   return (
-    <AppShell title="Tipos de Vacina">
-      <VacinasPageClient initialTipos={tiposVacina || []} />
+    <AppShell title="Vacinas (Aplicadas e Agendadas)">
+      <AgendaPageClient
+        initialAgenda={
+          (agendaVacinas || []) as unknown as (AgendaVacina & { animal?: Animal; tipo_vacina?: TipoVacina })[]
+        }
+      />
     </AppShell>
   )
 }

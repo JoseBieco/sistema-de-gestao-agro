@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { createParceiro, updateParceiro, deleteParceiro, getParceiros } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +35,7 @@ import { formatDocument, formatPhone } from "@/lib/utils/format";
 import { Plus, Edit, Trash2, Loader2, Users } from "lucide-react";
 import type { Parceiro, TipoParceiro } from "@/lib/types/database";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ParceirosPageClientProps {
   initialParceiros: Parceiro[];
@@ -44,28 +45,32 @@ export function ParceirosPageClient({
   initialParceiros,
 }: ParceirosPageClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const [parceiros, setParceiros] = useState(initialParceiros);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteParceiroId, setDeleteParceiroId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     tipo: "ambos" as TipoParceiro,
-    documento: "",
+    cpf_cnpj: "",
     telefone: "",
     email: "",
     endereco: "",
     observacoes: "",
   });
 
+  useEffect(() => {
+    setParceiros(initialParceiros);
+  }, [initialParceiros]);
+
   function openDialog(parceiro?: Parceiro) {
     if (parceiro) {
       setEditingParceiro(parceiro);
       setFormData({
         nome: parceiro.nome,
-        tipo: parceiro.tipo,
-        documento: parceiro.documento || "",
+        tipo: parceiro.tipo as TipoParceiro,
+        cpf_cnpj: parceiro.cpf_cnpj || "",
         telefone: parceiro.telefone || "",
         email: parceiro.email || "",
         endereco: parceiro.endereco || "",
@@ -76,7 +81,7 @@ export function ParceirosPageClient({
       setFormData({
         nome: "",
         tipo: "ambos",
-        documento: "",
+        cpf_cnpj: "",
         telefone: "",
         email: "",
         endereco: "",
@@ -91,31 +96,29 @@ export function ParceirosPageClient({
     setLoading(true);
 
     try {
+      const dataToSave = { ...formData };
+
       if (editingParceiro) {
-        const { error } = await supabase
-          .from("parceiros")
-          .update(formData)
-          .eq("id", editingParceiro.id);
-        if (error) {
-          toast.error("Erro ao atualizar parceiro:" + error);
-          throw error;
-        } else toast.success("Parceiro atualizado com sucesso.");
+        const res = await updateParceiro(editingParceiro.id, dataToSave);
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
+        toast.success("Parceiro atualizado com sucesso.");
       } else {
-        const { error } = await supabase
-          .from("parceiros")
-          .insert({ ...formData, ativo: true });
-        if (error) throw error;
+        const res = await createParceiro({ ...dataToSave, ativo: true });
+        if (res?.error) {
+          toast.error("Erro: " + res.error);
+          return;
+        }
+        toast.success("Parceiro criado com sucesso.");
       }
-      // Atualizar o state sem necessitar de buscar as informações no banco novamente
-      const { data } = await supabase
-        .from("parceiros")
-        .select("*")
-        .order("nome");
-      if (data) setParceiros(data);
       setDialogOpen(false);
-      router.refresh();
     } catch (error) {
-      toast.error("Erro ao salvar parceiro:" + error);
+      toast.error(
+        "Erro ao salvar parceiro:: " +
+          (error instanceof Error ? error.message : error),
+      );
       console.error("Erro ao salvar parceiro:", error);
     } finally {
       setLoading(false);
@@ -123,18 +126,21 @@ export function ParceirosPageClient({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este parceiro?")) return;
+    setDeleteParceiroId(id);
+  }
 
+  const confirmDeleteParceiro = async () => {
+    if (!deleteParceiroId) return;
     try {
-      const { error } = await supabase.from("parceiros").delete().eq("id", id);
-      if (error) throw error;
-
-      setParceiros(parceiros.filter((p) => p.id !== id));
-      toast.success("Sucesso ao excluir o parceiro.");
-      router.refresh();
+      const res = await deleteParceiro(deleteParceiroId);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      toast.success("Parceiro excluído com sucesso.");
+      const data = await getParceiros();
+      if (data) setParceiros(data);
     } catch (error) {
-      toast.error("Erro ao excluir parceiro:" + error);
-      console.error("Erro ao excluir parceiro:", error);
+      toast.error("Erro ao excluir parceiro.");
+    } finally {
+      setDeleteParceiroId(null);
     }
   }
 
@@ -142,12 +148,14 @@ export function ParceirosPageClient({
     comprador: "Comprador",
     vendedor: "Vendedor",
     ambos: "Comprador/Vendedor",
+    fornecedor_insumo: "Fornecedor Insumo",
   };
 
   const tipoBadgeVariant = {
     comprador: "default",
     vendedor: "secondary",
     ambos: "outline",
+    fornecedor_insumo: "destructive",
   } as const;
 
   return (
@@ -183,13 +191,13 @@ export function ParceirosPageClient({
                       {parceiro.nome}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={tipoBadgeVariant[parceiro.tipo]}>
-                        {tipoLabel[parceiro.tipo]}
+                      <Badge variant={tipoBadgeVariant[parceiro.tipo as TipoParceiro]}>
+                        {tipoLabel[parceiro.tipo as TipoParceiro]}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {parceiro.documento
-                        ? formatDocument(parceiro.documento)
+                      {parceiro.cpf_cnpj
+                        ? formatDocument(parceiro.cpf_cnpj)
                         : "-"}
                     </TableCell>
                     <TableCell>
@@ -266,16 +274,17 @@ export function ParceirosPageClient({
                     <SelectItem value="comprador">Comprador</SelectItem>
                     <SelectItem value="vendedor">Vendedor</SelectItem>
                     <SelectItem value="ambos">Ambos</SelectItem>
+                    <SelectItem value="fornecedor_insumo">Fornecedor de Insumos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="documento">CPF/CNPJ</Label>
+                <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
                 <Input
-                  id="documento"
-                  value={formData.documento}
+                  id="cpf_cnpj"
+                  value={formData.cpf_cnpj}
                   onChange={(e) =>
-                    setFormData({ ...formData, documento: e.target.value })
+                    setFormData({ ...formData, cpf_cnpj: e.target.value })
                   }
                   placeholder="000.000.000-00"
                 />
@@ -341,6 +350,7 @@ export function ParceirosPageClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog open={!!deleteParceiroId} onOpenChange={(v) => !v && setDeleteParceiroId(null)} title="Excluir Parceiro" description="Tem certeza que deseja excluir este parceiro?" onConfirm={confirmDeleteParceiro} />
     </div>
   );
 }

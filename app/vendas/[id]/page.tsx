@@ -1,47 +1,30 @@
-import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { TransacaoDetailClient } from "@/components/financial/transacao-detail-client";
 import { notFound } from "next/navigation";
+import { TransacaoService } from "@/src/core/services/TransacaoService";
+import { ParceiroService } from "@/src/core/services/ParceiroService";
 
-export default async function VendaDetailPage({
-  params,
-}: {
+interface TransacaoPageProps {
   params: Promise<{ id: string }>;
-}) {
+}
+
+export default async function VendaDetailPage({ params }: TransacaoPageProps) {
   const { id } = await params;
-  const supabase = await createClient();
+  const transacaoService = new TransacaoService();
+  const parceiroService = new ParceiroService();
 
-  const { data: transacao, error } = await supabase
-    .from("transacoes")
-    .select(
-      `
-      *,
-      parceiro:parceiros(*),
-      itens:itens_transacao(*),
-      parcelas(*),
-      animais_transacao(
-        animal:animais(
-          id,
-          numero_brinco,
-          nome,
-          genero,
-          raca:racas(nome)
-        ),
-        item:itens_transacao(valor_unitario, descricao)
-      )
-    `
-    )
-    .eq("id", id)
-    .eq("tipo", "venda")
-    .single();
+  const [transacao, parceiros] = await Promise.all([
+    transacaoService.getTransacaoById(id),
+    parceiroService.getAllParceiros()
+  ]);
 
-  if (error || !transacao) {
+  if (!transacao || transacao.tipo !== "venda") {
     notFound();
   }
 
   return (
-    <AppShell title="Detalhes da Venda">
-      <TransacaoDetailClient transacao={transacao} tipo="venda" />
+    <AppShell title={`Detalhes da Venda - ${transacao.id.slice(0, 8)}`}>
+      <TransacaoDetailClient transacao={transacao as any} tipo="venda" parceiros={parceiros as any} />
     </AppShell>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   Dialog,
   DialogContent,
@@ -32,15 +32,16 @@ interface AnimalStatusDialogProps {
   onSuccess: () => void;
 }
 
+import { updateAnimal } from "@/app/animais/actions";
+
 export function AnimalStatusDialog({
   animal,
   open,
   onOpenChange,
   onSuccess,
 }: AnimalStatusDialogProps) {
-  const supabase = createClient();
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<StatusAnimal>("ativo");
+  const [status, setStatus] = useState<StatusAnimal>("ATIVO");
   const [dataStatus, setDataStatus] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -53,25 +54,20 @@ export function AnimalStatusDialog({
     try {
       const updateData: any = {
         status,
-        data_status: dataStatus,
+        data_status: new Date(dataStatus),
       };
 
-      if (status === "morto") {
+      if (status === "MORTO") {
         updateData.motivo_morte = motivo;
       }
 
-      const { error } = await supabase
-        .from("animais")
-        .update(updateData)
-        .eq("id", animal.id);
-
-      if (error) throw error;
+      const res = await updateAnimal(animal.id, updateData); if (res?.error) { toast.error("Erro: " + res.error); return; }
 
       onSuccess();
       onOpenChange(false);
       toast.success("Sucesso ao atualizar o status do animal.");
     } catch (error) {
-      toast.error("Erro ao atualizar status: " + error);
+      toast.error("Erro ao atualizar status: : " + (error instanceof Error ? error.message : error));
       console.error("Erro ao atualizar status:", error);
     } finally {
       setLoading(false);
@@ -85,7 +81,7 @@ export function AnimalStatusDialog({
           <DialogTitle>Alterar Status do Animal</DialogTitle>
           <DialogDescription>
             Animal:{" "}
-            {animal?.numero_brinco || animal?.nome || "Sem identificação"}
+            {animal?.brinco || animal?.nome || "Sem identificação"}
           </DialogDescription>
         </DialogHeader>
 
@@ -100,10 +96,9 @@ export function AnimalStatusDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="vendido">Vendido</SelectItem>
-                <SelectItem value="morto">Morto</SelectItem>
-                <SelectItem value="transferido">Transferido</SelectItem>
+                <SelectItem value="ATIVO">Ativo</SelectItem>
+                <SelectItem value="VENDIDO">Vendido</SelectItem>
+                <SelectItem value="MORTO">Morto</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -117,7 +112,7 @@ export function AnimalStatusDialog({
             />
           </div>
 
-          {status === "morto" && (
+          {status === "MORTO" && (
             <div className="space-y-2">
               <Label>Motivo/Causa</Label>
               <Textarea

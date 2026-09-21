@@ -1,0 +1,507 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Raca {
+  id         String    @id @default(uuid())
+  nome       String
+  descricao  String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+
+  animais    Animal[]
+
+  @@map("racas")
+}
+
+model Local {
+  id         String    @id @default(uuid())
+  nome       String
+  tipo       String    // pasto, piquete, curral, confinamento
+  area_hectares Decimal? @db.Decimal(10, 2)
+  capacidade_maxima Int?
+  observacoes String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+
+  animais    Animal[]  @relation("LocalAnimais")
+  movimentos_origem  HistoricoMovimentacao[] @relation("LocalOrigem")
+  movimentos_destino HistoricoMovimentacao[] @relation("LocalDestino")
+
+  @@map("locais")
+}
+
+model Parcela {
+  id                      String    @id @default(uuid())
+  transacao_id            String
+  numero_parcela          Int
+  data_vencimento         DateTime
+  valor                   Decimal   @db.Decimal(12, 2)
+  status                  String    @default("pendente")
+  data_pagamento          DateTime?
+  data_baixa_promissoria  DateTime?
+  foto_promissoria_frente_url String?
+  foto_promissoria_verso_url  String?
+  observacoes             String?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @default(now()) @updatedAt
+
+  transacao               Transacao @relation(fields: [transacao_id], references: [id], onDelete: Cascade)
+
+  @@map("parcelas")
+}
+
+model Parceiro {
+  id         String    @id @default(uuid())
+  nome       String
+  cpf_cnpj   String?
+  telefone   String?
+  email      String?
+  tipo       String    // comprador, vendedor, ambos
+  endereco   String?
+  observacoes String?
+  ativo      Boolean   @default(true)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now()) @updatedAt
+
+  transacoes Transacao[]
+  compras    Animal[]  @relation("Comprador")
+  vendas     Animal[]  @relation("Vendedor")
+  compras_insumos InsumoCompra[]
+
+  @@map("parceiros")
+}
+
+model Animal {
+  id             String    @id @default(uuid())
+  brinco         String    @unique
+  nome           String?
+  raca_id        String
+  sexo           String
+  origem         String    @default("nascido") // nascido, comprado
+  data_nascimento DateTime?
+  peso_nascimento Decimal? @db.Decimal(10, 3)
+  peso_atual     Decimal?  @db.Decimal(10, 3)
+  status         String    @default("ATIVO") // ATIVO, VENDIDO, MORTO
+  data_status    DateTime?
+  motivo_morte   String?
+  local_id       String?
+  mae_id         String?
+  pai_id         String?
+
+  // Controle financeiro
+  valor_compra   Decimal?  @db.Decimal(12, 2)
+  comprador_id   String?
+  vendedor_id    String?
+
+  observacoes    String?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+
+  raca           Raca      @relation(fields: [raca_id], references: [id])
+  local          Local?    @relation("LocalAnimais", fields: [local_id], references: [id])
+  mae            Animal?   @relation("MaeFilhos", fields: [mae_id], references: [id])
+  pai            Animal?   @relation("PaiFilhos", fields: [pai_id], references: [id])
+  filhos_mae     Animal[]  @relation("MaeFilhos")
+  filhos_pai     Animal[]  @relation("PaiFilhos")
+
+  comprador      Parceiro? @relation("Comprador", fields: [comprador_id], references: [id])
+  vendedor       Parceiro? @relation("Vendedor", fields: [vendedor_id], references: [id])
+
+  agenda_vacinas         AgendaVacina[]
+  transacoes             Transacao[]
+  transacao_grupos       TransacaoGrupo[]
+  historico_pesagem      HistoricoPesagem[]
+  historico_movimentacao HistoricoMovimentacao[]
+  ciclos_femea           CicloReprodutivo[] @relation("FemeaCiclo")
+  ciclos_reprodutor      CicloReprodutivo[] @relation("ReprodutorCiclo")
+  tratamentos_aplicados  TratamentoAplicado[]
+
+  @@map("animais")
+}
+
+model TipoVacina {
+  id               String   @id @default(uuid())
+  nome             String
+  descricao        String?
+  carencia_dias    Int?
+  doses_por_ano    Int      @default(1)
+  dias_entre_doses Int      @default(365)
+  obrigatoria      Boolean  @default(false)
+  apenas_femeas    Boolean  @default(false)
+  dose_unica       Boolean  @default(false)
+  meses_aplicacao  Int[]
+  created_at       DateTime @default(now())
+  updated_at       DateTime @default(now()) @updatedAt
+
+  agendas    AgendaVacina[]
+
+  @@map("tipos_vacina")
+}
+
+model AgendaVacina {
+  id             String    @id @default(uuid())
+  animal_id      String
+  tipo_vacina_id String
+  data_prevista  DateTime
+  data_aplicacao DateTime?
+  // Valores usados pela aplicação: "pendente", "aplicada", "cancelada" (minúsculo).
+  status         String    @default("pendente")
+  observacoes    String?
+  dose_numero    Int       @default(1)
+  vacina_pai_id  String?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+
+  animal         Animal     @relation(fields: [animal_id], references: [id])
+  tipo_vacina    TipoVacina @relation(fields: [tipo_vacina_id], references: [id])
+
+  @@map("agenda_vacinas")
+}
+
+model CicloReprodutivo {
+  id             String    @id @default(uuid())
+  animal_id      String
+  data_ultimo_parto DateTime?
+  data_ultimo_cio   DateTime?
+  data_cobertura    DateTime?
+  tipo_cobertura    String    @default("monta_natural") // monta_natural, inseminacao
+  touro_id          String?
+  data_prevista_parto DateTime?
+  data_prevista_cio DateTime?
+  data_diagnostico_gestacao DateTime?
+  status         String    @default("vazia") // vazia, prenha, lactacao, aguardando_diagnostico
+  observacoes    String?
+  ativo          Boolean   @default(true)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now()) @updatedAt
+
+  animal         Animal    @relation("FemeaCiclo", fields: [animal_id], references: [id])
+  touro          Animal?   @relation("ReprodutorCiclo", fields: [touro_id], references: [id])
+
+  @@map("ciclos_reprodutivos")
+}
+
+model Transacao {
+  id             String    @id @default(uuid())
+  tipo             String    // compra, venda
+  parceiro_id      String?
+  data_negociacao  DateTime
+  qtd_parcelas     Int       @default(1)
+  forma_pagamento  String?
+  valor_total      Decimal   @db.Decimal(12, 2)
+  nota_fiscal_url  String?
+  gta_url          String?
+  observacoes      String?
+  desconto_carcaca Decimal?  @db.Decimal(5, 2)
+  status           String    @default("pendente") // pendente, finalizada, cancelada
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @default(now()) @updatedAt
+
+  parceiro         Parceiro? @relation(fields: [parceiro_id], references: [id])
+  parcelas         Parcela[]
+  animais          Animal[]
+  grupos           TransacaoGrupo[]
+
+  @@map("transacoes")
+}
+
+model TransacaoGrupo {
+  id                 String    @id @default(uuid())
+  transacao_id       String
+  nome               String
+  tipo_medida        String    // arroba, kilo
+  valor_unidade      Decimal   @db.Decimal(12, 2)
+  quantidade_animais Int
+  peso_total         Decimal   @db.Decimal(10, 3)
+  valor_calculado    Decimal   @db.Decimal(12, 2)
+  created_at         DateTime  @default(now())
+
+  transacao          Transacao @relation(fields: [transacao_id], references: [id], onDelete: Cascade)
+  animais            Animal[]
+
+  @@map("transacao_grupos")
+}
+
+model HistoricoMovimentacao {
+  id               String    @id @default(uuid())
+  animal_id        String
+  local_origem_id  String?
+  local_destino_id String
+  data_movimentacao DateTime
+  motivo           String?
+  created_at       DateTime  @default(now())
+
+  animal           Animal    @relation(fields: [animal_id], references: [id])
+  local_origem     Local?    @relation("LocalOrigem", fields: [local_origem_id], references: [id])
+  local_destino    Local     @relation("LocalDestino", fields: [local_destino_id], references: [id])
+
+  @@map("historico_movimentacao")
+}
+
+model HistoricoPesagem {
+  id           String    @id @default(uuid())
+  animal_id    String
+  peso         Decimal   @db.Decimal(10, 3)
+  data_pesagem DateTime
+  observacao   String?
+  created_at   DateTime  @default(now())
+
+  animal       Animal    @relation(fields: [animal_id], references: [id])
+
+  @@map("historico_pesagem")
+}
+
+model CotacaoHistorica {
+  id              String    @id @default(uuid())
+  data            DateTime
+  produto         String    // boi_gordo, milho, soja
+  valor           Decimal   @db.Decimal(12, 2)
+  // Obrigatório (com default) porque compõe a chave de unicidade abaixo:
+  // no Postgres, valores NULL não colidem entre si em @@unique, então um
+  // "estado" opcional deixava a constraint de não repetir cotação por
+  // dia/produto/estado furável. O código sempre envia um valor (default "SP").
+  estado          String    @default("SP")
+  unidade_medida  String?   // ex: "@", "kg", "sc"
+  fonte           String?   // ex: "AgroDoc AI"
+  data_coleta     DateTime? @default(now())
+  created_at      DateTime  @default(now())
+
+  @@unique([data, produto, estado])
+  @@map("cotacoes_historicas")
+}
+model Fazenda {
+  id         String   @id @default(uuid())
+  nome       String
+  cnpj       String?
+  ie         String?
+  endereco   String?
+  cidade     String?
+  estado     String?
+  desconto_carcaca Decimal? @db.Decimal(5, 2) @default(50)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("fazendas")
+}
+
+// ==========================================
+// MÓDULO DE NUTRIÇÃO E ESTOQUE DE INSUMOS
+// ==========================================
+
+// ==========================================
+// ESTOQUE UNIFICADO (Insumos de nutrição + Produtos sanitários)
+//
+// Um único cadastro de "item de estoque" e um único Kardex, distinguidos
+// pelo campo `categoria` ("INSUMO" | "SANITARIO"). Antes eram dois módulos
+// praticamente idênticos duplicados (Insumo/MovimentacaoEstoque de um lado,
+// ProdutoSanitario/MovimentacaoEstoqueSanitario do outro) — unificados aqui
+// para não precisar duplicar de novo se surgir um terceiro tipo de estoque.
+// `tipo` e `indicacao` só fazem sentido para categoria SANITARIO.
+// ==========================================
+
+model ItemEstoque {
+  id              String   @id @default(uuid())
+  categoria       String   // INSUMO, SANITARIO
+  nome            String
+  tipo            String?  // "REMEDIO" ou "VACINA" (apenas categoria SANITARIO)
+  unidade_medida  String   // Ex: kg, litro, ml, dose, frasco
+  indicacao       String?  // Para que serve (apenas categoria SANITARIO)
+  estoque_atual   Decimal  @default(0) @db.Decimal(12, 3)
+  descricao       String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  compras_itens          InsumoCompraItem[]
+  movimentacoes          MovimentacaoEstoque[]
+  ocorrencias_vinculadas OcorrenciaProduto[]
+  tratamentos_aplicados  TratamentoAplicadoProduto[]
+
+  @@map("itens_estoque")
+}
+
+model InsumoCompra {
+  id                       String   @id @default(uuid())
+  parceiro_id              String
+  data_solicitacao         DateTime
+  data_prevista_entrega    DateTime?
+  status_pagamento         String   @default("PENDENTE") // PENDENTE, PARCIAL, PAGO
+  status_entrega           String   @default("PENDENTE") // PENDENTE, PARCIALMENTE_ENTREGUE, ENTREGUE
+  valor_itens              Decimal  @db.Decimal(12, 2)
+  valor_frete              Decimal  @default(0) @db.Decimal(12, 2)
+  valor_outros_custos      Decimal  @default(0) @db.Decimal(12, 2)
+  valor_total              Decimal  @db.Decimal(12, 2)
+  observacoes              String?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  parceiro                 Parceiro @relation(fields: [parceiro_id], references: [id])
+  itens                    InsumoCompraItem[]
+  parcelas                 InsumoParcela[]
+  romaneios                RomaneioEntrega[]
+
+  @@map("insumos_compras")
+}
+
+model InsumoCompraItem {
+  id                 String   @id @default(uuid())
+  insumo_compra_id   String
+  item_id            String
+  quantidade_compra  Decimal  @db.Decimal(12, 3)
+  unidade_compra     String   // Ex: Tonelada, Saca 50kg
+  fator_conversao    Decimal  @db.Decimal(12, 4) // Fator para converter em unidade_base
+  valor_unitario     Decimal  @db.Decimal(12, 4)
+  valor_total        Decimal  @db.Decimal(12, 2)
+  numero_lote        String?
+  data_validade      DateTime?
+
+  compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
+  insumo             ItemEstoque  @relation(fields: [item_id], references: [id])
+  itens_recebidos    RomaneioItem[]
+
+  @@map("insumos_compras_itens")
+}
+
+model InsumoParcela {
+  id                 String   @id @default(uuid())
+  insumo_compra_id   String
+  numero_parcela     Int
+  data_vencimento    DateTime
+  data_pagamento     DateTime?
+  valor              Decimal  @db.Decimal(12, 2)
+  forma_pagamento    String?
+  status             String   @default("PENDENTE") // PENDENTE, PAGO, ATRASADO
+  observacoes        String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @default(now()) @updatedAt
+
+  compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
+
+  @@map("insumos_parcelas")
+}
+
+model RomaneioEntrega {
+  id                 String   @id @default(uuid())
+  insumo_compra_id   String
+  data_entrega       DateTime
+  nome_recebedor     String?
+  observacoes        String?
+  created_at         DateTime @default(now())
+
+  compra             InsumoCompra @relation(fields: [insumo_compra_id], references: [id], onDelete: Cascade)
+  itens              RomaneioItem[]
+
+  @@map("romaneios_entrega")
+}
+
+model RomaneioItem {
+  id                    String   @id @default(uuid())
+  romaneio_entrega_id   String
+  insumo_compra_item_id String
+  quantidade_entregue   Decimal  @db.Decimal(12, 3) // Na unidade de compra
+  numero_lote           String?
+  data_validade         DateTime?
+
+  romaneio           RomaneioEntrega @relation(fields: [romaneio_entrega_id], references: [id], onDelete: Cascade)
+  compra_item        InsumoCompraItem @relation(fields: [insumo_compra_item_id], references: [id], onDelete: Cascade)
+
+  @@map("romaneios_itens")
+}
+
+model MovimentacaoEstoque {
+  id                 String   @id @default(uuid())
+  item_id            String
+  // Vocabulário depende da categoria do item (ver ItemEstoque.categoria):
+  // INSUMO usa ENTRADA_COMPRA, SAIDA_CONSUMO, AJUSTE_INVENTARIO, PERDA_VALIDADE;
+  // SANITARIO usa ENTRADA, SAIDA, AJUSTE.
+  tipo_transacao     String
+  quantidade         Decimal  @db.Decimal(12, 3) // Na unidade_medida do item
+  data_transacao     DateTime @default(now())
+  referencia_id      String?  // Ex: ID do RomaneioItem ou registro de consumo (uso do lado INSUMO)
+  numero_lote        String?
+  data_validade      DateTime?
+  custo_por_unidade  Decimal? @db.Decimal(12, 4) // Custo real com frete rateado (uso do lado INSUMO)
+  observacoes        String?
+
+  item               ItemEstoque @relation(fields: [item_id], references: [id])
+
+  @@map("movimentacao_estoque")
+}
+
+// ==========================================
+// MÓDULO SANITÁRIO (Livro de Doenças)
+// ==========================================
+
+model OcorrenciaSanitaria {
+  id                 String   @id @default(uuid())
+  nome               String   // Ex: Nascimento de bezerro
+  descricao          String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  produtos_indicados OcorrenciaProduto[]
+  tratamentos_aplicados TratamentoAplicado[]
+
+  @@map("ocorrencias_sanitarias")
+}
+
+model OcorrenciaProduto {
+  id                 String   @id @default(uuid())
+  ocorrencia_id      String
+  item_id            String
+  observacoes        String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  ocorrencia         OcorrenciaSanitaria @relation(fields: [ocorrencia_id], references: [id], onDelete: Cascade)
+  produto            ItemEstoque         @relation(fields: [item_id], references: [id])
+  dosagens           DosagemOcorrencia[]
+
+  @@map("ocorrencia_produtos")
+}
+
+model DosagemOcorrencia {
+  id                    String   @id @default(uuid())
+  ocorrencia_produto_id String
+  nome_faixa            String   // Ex: "Bezerro", "Adulto"
+  quantidade            Decimal  @db.Decimal(10, 3)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  ocorrencia_produto    OcorrenciaProduto @relation(fields: [ocorrencia_produto_id], references: [id], onDelete: Cascade)
+
+  @@map("dosagens_ocorrencia")
+}
+
+model TratamentoAplicado {
+  id                 String   @id @default(uuid())
+  animal_id          String
+  ocorrencia_id      String
+  data_aplicacao     DateTime @default(now())
+  observacoes        String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  animal             Animal              @relation(fields: [animal_id], references: [id])
+  ocorrencia         OcorrenciaSanitaria @relation(fields: [ocorrencia_id], references: [id])
+  produtos_aplicados TratamentoAplicadoProduto[]
+
+  @@map("tratamentos_aplicados")
+}
+
+model TratamentoAplicadoProduto {
+  id                     String   @id @default(uuid())
+  tratamento_aplicado_id String
+  item_id                String
+  quantidade_aplicada    Decimal  @db.Decimal(10, 3)
+  created_at             DateTime @default(now())
+
+  tratamento_aplicado    TratamentoAplicado @relation(fields: [tratamento_aplicado_id], references: [id], onDelete: Cascade)
+  produto                ItemEstoque        @relation(fields: [item_id], references: [id])
+
+  @@map("tratamentos_aplicados_produtos")
+}

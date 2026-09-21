@@ -1,11 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/layout/app-shell"
 import { RacasPageClient } from "./page-client"
+import { getRacas } from "./actions"
 
 export default async function RacasPage() {
-  const supabase = await createClient()
-
-  const { data: racas } = await supabase.from("racas").select("*").order("nome")
+  const racas = await getRacas()
 
   return (
     <AppShell title="Raças">

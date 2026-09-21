@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
   CardContent,
@@ -32,7 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatDate, getStatusColor } from "@/lib/utils/format";
-import { createClient } from "@/lib/supabase/client";
+
 import {
   ArrowLeft,
   ShoppingCart,
@@ -48,20 +49,18 @@ import {
   AlertCircle,
   Eye,
   Edit,
+  Trash2,
 } from "lucide-react";
 import type {
   TipoTransacao,
   Parcela,
   Parceiro,
-  ItemTransacao,
   Animal,
   Raca,
 } from "@/lib/types/database";
-
-interface AnimaisTransacaoExtended {
-  animal: Animal & { raca?: Raca };
-  item?: ItemTransacao;
-}
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { updateTransacao, deleteTransacao } from "@/app/transacoes/actions";
 
 interface TransacaoExtended {
   id: string;
@@ -74,28 +73,49 @@ interface TransacaoExtended {
   gta_url?: string;
   observacoes?: string;
   status: string;
+  parceiro_id?: string;
+  desconto_carcaca?: number | null;
   parceiro?: Parceiro;
-  itens?: ItemTransacao[];
   parcelas?: Parcela[];
-  animais_transacao?: AnimaisTransacaoExtended[];
+  animais?: any[];
+  grupos?: any[];
 }
 
 interface TransacaoDetailClientProps {
   transacao: TransacaoExtended;
   tipo: TipoTransacao;
+  parceiros: Parceiro[];
 }
 
 export function TransacaoDetailClient({
   transacao,
   tipo,
+  parceiros,
 }: TransacaoDetailClientProps) {
+  const router = useRouter();
   const [parcelas, setParcelas] = useState(transacao.parcelas || []);
   const [selectedParcela, setSelectedParcela] = useState<Parcela | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [editTransacaoOpen, setEditTransacaoOpen] = useState(false);
+  const [deleteTransacaoOpen, setDeleteTransacaoOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    data_negociacao: new Date(transacao.data_negociacao).toISOString().split("T")[0],
+    forma_pagamento: transacao.forma_pagamento || "",
+    status: transacao.status || "pendente",
+    observacoes: transacao.observacoes || "",
+    nota_fiscal_url: transacao.nota_fiscal_url || "",
+    gta_url: transacao.gta_url || "",
+    parceiro_id: transacao.parceiro_id || ""
+  });
+
   const isCompra = tipo === "compra";
   const Icon = isCompra ? ShoppingCart : TrendingUp;
+
+  const somaParcelas = parcelas.reduce((acc, p) => acc + (p.valor || 0), 0);
+  const diferencaParcelas = transacao.valor_total - somaParcelas;
+  const hasDiferenca = Math.abs(diferencaParcelas) > 0.01;
 
   const stats = {
     totalParcelas: parcelas.length,
@@ -108,15 +128,11 @@ export function TransacaoDetailClient({
       .reduce((acc, p) => acc + p.valor, 0),
   };
 
-  const animais =
-    transacao.animais_transacao?.map((at) => ({
-      ...at.animal,
-      valor: at.item?.valor_unitario,
-      descricao: at.item?.descricao,
-    })) || [];
+  const animais = transacao.animais || [];
 
   async function handleUpdateParcela(data: {
     status: string;
+    valor?: number;
     data_pagamento?: string;
     data_baixa_promissoria?: string;
     observacoes?: string;
@@ -124,25 +140,73 @@ export function TransacaoDetailClient({
     if (!selectedParcela) return;
 
     setLoading(true);
-    const supabase = createClient();
 
-    const { error } = await supabase
-      .from("parcelas")
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", selectedParcela.id);
+    try {
+      const { payParcela, updateParcela } = await import("@/app/parcelas/actions");
+      
+      let updated;
+      if (data.status === "pago") {
+        updated = await payParcela(selectedParcela.id, data);
+      } else {
+        updated = await updateParcela(selectedParcela.id, {
+          status: data.status,
+          valor: data.valor,
+          data_pagamento: data.data_pagamento ? new Date(data.data_pagamento).toISOString() : null,
+          data_baixa_promissoria: data.data_baixa_promissoria ? new Date(data.data_baixa_promissoria).toISOString() : null,
+          observacoes: data.observacoes
+        });
+      }
 
-    if (!error) {
-      setParcelas((prev) =>
-        prev.map((p) => (p.id === selectedParcela.id ? { ...p, ...data } : p))
-      );
+      if (updated?.error) {
+        toast.error("Erro: " + updated.error);
+        return;
+      }
+      
+      toast.success("Parcela atualizada com sucesso.");
+      window.location.reload();
+      
+    } catch (error) {
+      toast.error("Erro ao atualizar parcela.");
+      console.error(error);
+    } finally {
+      setLoading(false);
       setDialogOpen(false);
       setSelectedParcela(null);
     }
+  }
 
-    setLoading(false);
+  async function handleUpdateTransacao() {
+    setLoading(true);
+    try {
+      await updateTransacao(transacao.id, {
+        ...editForm,
+        data_negociacao: new Date(editForm.data_negociacao)
+      });
+      toast.success("Transação atualizada com sucesso!");
+      setEditTransacaoOpen(false);
+      router.refresh();
+    } catch (error) {
+      toast.error("Erro ao atualizar transação.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+    async function handleDeleteTransacao() {
+    setDeleteTransacaoOpen(true);
+  }
+
+  const confirmDeleteTransacao = async () => {
+    try {
+      const res = await deleteTransacao(transacao.id);
+      if (res?.error) { toast.error("Erro: " + res.error); return; }
+      toast.success("Transação excluída.");
+      router.push(isCompra ? "/compras" : "/vendas");
+    } catch (error) {
+      toast.error("Erro ao excluir transação.");
+    } finally {
+      setDeleteTransacaoOpen(false);
+    }
   }
 
   function getParcelaStatusIcon(status: string) {
@@ -185,6 +249,17 @@ export function TransacaoDetailClient({
               Registrada em {formatDate(transacao.data_negociacao)}
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setEditTransacaoOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar
+          </Button>
+          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700" onClick={handleDeleteTransacao}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir
+          </Button>
         </div>
       </div>
 
@@ -276,7 +351,7 @@ export function TransacaoDetailClient({
                 <div>
                   <p className="text-sm text-muted-foreground">Documento</p>
                   <p className="font-medium">
-                    {transacao.parceiro?.documento || "Não informado"}
+                    {transacao.parceiro?.cpf_cnpj || "Não informado"}
                   </p>
                 </div>
                 <div>
@@ -404,16 +479,36 @@ export function TransacaoDetailClient({
                     <TableHead>Nome</TableHead>
                     <TableHead>Gênero</TableHead>
                     <TableHead>Raça</TableHead>
-                    <TableHead>Grupo</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Peso</TableHead>
+                    <TableHead className="text-right">Valor Unit.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {animais.length > 0 ? (
-                    animais.map((animal) => (
+                    animais.map((animal) => {
+                      let valorUnitarioCalculado = null;
+                      if (transacao.grupos && animal.peso_atual) {
+                        const grupoDoAnimal = transacao.grupos.find(g => 
+                          g.animais && g.animais.some((a: any) => a.id === animal.id)
+                        );
+                        if (grupoDoAnimal) {
+                          if (grupoDoAnimal.tipo_medida === "kilo") {
+                            valorUnitarioCalculado = animal.peso_atual * grupoDoAnimal.valor_unidade;
+                          } else {
+                            const desconto = transacao.desconto_carcaca ?? 50;
+                            valorUnitarioCalculado = ((animal.peso_atual * (desconto / 100)) / 15) * grupoDoAnimal.valor_unidade;
+                          }
+                        }
+                      }
+                      
+                      const valorExibicao = valorUnitarioCalculado 
+                        ? formatCurrency(valorUnitarioCalculado) 
+                        : (isCompra && animal.valor_compra ? formatCurrency(animal.valor_compra) : "-");
+
+                      return (
                       <TableRow key={animal.id}>
                         <TableCell className="font-mono">
-                          {animal.numero_brinco || "-"}
+                          {animal.brinco || "-"}
                         </TableCell>
                         <TableCell>
                           <Link
@@ -426,21 +521,21 @@ export function TransacaoDetailClient({
                         <TableCell>
                           <Badge
                             variant={
-                              animal.genero === "M" ? "default" : "secondary"
+                              animal.sexo === "M" ? "default" : "secondary"
                             }
                           >
-                            {animal.genero === "M" ? "Macho" : "Fêmea"}
+                            {animal.sexo === "M" ? "Macho" : "Fêmea"}
                           </Badge>
                         </TableCell>
                         <TableCell>{animal.raca?.nome || "-"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {animal.descricao || "-"}
+                          {animal.peso_atual ? `${animal.peso_atual} kg` : "-"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {animal.valor ? formatCurrency(animal.valor) : "-"}
+                          {valorExibicao}
                         </TableCell>
                       </TableRow>
-                    ))
+                    )})
                   ) : (
                     <TableRow>
                       <TableCell
@@ -470,6 +565,20 @@ export function TransacaoDetailClient({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {hasDiferenca && (
+                <div className="p-3 mb-4 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2 text-amber-800 text-sm">
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Atenção aos Valores</p>
+                    <p>
+                      A soma das parcelas ({formatCurrency(somaParcelas)}) difere do total da transação ({formatCurrency(transacao.valor_total)}).
+                      {diferencaParcelas > 0
+                        ? ` Falta distribuir ${formatCurrency(Math.abs(diferencaParcelas))}.`
+                        : ` Há um excesso de ${formatCurrency(Math.abs(diferencaParcelas))}.`}
+                    </p>
+                  </div>
+                </div>
+              )}
               {parcelas.length > 0 ? (
                 parcelas.map((parcela) => (
                   <div
@@ -559,31 +668,29 @@ export function TransacaoDetailClient({
             </CardContent>
           </Card>
 
-          {/* Resumo Itens */}
-          {transacao.itens && transacao.itens.length > 0 && (
+          {/* Resumo Grupos */}
+          {transacao.grupos && transacao.grupos.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Grupos de Preço</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {transacao.itens.map((item, index) => (
+                {transacao.grupos.map((grupo: any, index: number) => (
                   <div
-                    key={item.id}
+                    key={grupo.id}
                     className="flex justify-between items-center p-3 rounded-lg bg-muted/30"
                   >
                     <div>
                       <p className="font-medium text-sm">
-                        {item.descricao || `Grupo ${index + 1}`}
+                        {grupo.nome || `Grupo ${index + 1}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {item.quantidade_animais} animais x{" "}
-                        {formatCurrency(item.valor_unitario)}
+                        {grupo.quantidade_animais} animais x{" "}
+                        {formatCurrency(grupo.valor_unidade)} por {grupo.tipo_medida === "kilo" ? "kg" : "@"}
                       </p>
                     </div>
                     <p className="font-bold">
-                      {formatCurrency(
-                        item.quantidade_animais * item.valor_unitario
-                      )}
+                      {formatCurrency(grupo.valor_calculado)}
                     </p>
                   </div>
                 ))}
@@ -621,6 +728,7 @@ export function TransacaoDetailClient({
               const formData = new FormData(e.currentTarget);
               handleUpdateParcela({
                 status: formData.get("status") as string,
+                valor: formData.get("valor") ? Number(formData.get("valor")) : undefined,
                 data_pagamento:
                   (formData.get("data_pagamento") as string) || undefined,
                 data_baixa_promissoria:
@@ -633,6 +741,16 @@ export function TransacaoDetailClient({
             className="space-y-4"
           >
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="valor">Valor</Label>
+                <Input
+                  id="valor"
+                  name="valor"
+                  type="number"
+                  step="0.01"
+                  defaultValue={selectedParcela?.valor}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <select
@@ -653,7 +771,7 @@ export function TransacaoDetailClient({
                   id="data_pagamento"
                   name="data_pagamento"
                   type="date"
-                  defaultValue={selectedParcela?.data_pagamento?.split("T")[0]}
+                  defaultValue={selectedParcela?.data_pagamento ? new Date(selectedParcela.data_pagamento).toISOString().split("T")[0] : ""}
                 />
               </div>
             </div>
@@ -666,7 +784,7 @@ export function TransacaoDetailClient({
                 name="data_baixa_promissoria"
                 type="date"
                 defaultValue={
-                  selectedParcela?.data_baixa_promissoria?.split("T")[0]
+                  selectedParcela?.data_baixa_promissoria ? new Date(selectedParcela.data_baixa_promissoria).toISOString().split("T")[0] : ""
                 }
               />
             </div>
@@ -675,7 +793,7 @@ export function TransacaoDetailClient({
               <Textarea
                 id="observacoes"
                 name="observacoes"
-                defaultValue={selectedParcela?.observacoes}
+                defaultValue={selectedParcela?.observacoes ?? undefined}
                 rows={3}
               />
             </div>
@@ -694,6 +812,106 @@ export function TransacaoDetailClient({
           </form>
         </DialogContent>
       </Dialog>
+      {/* Dialog Editar Transacao */}
+      <Dialog open={editTransacaoOpen} onOpenChange={setEditTransacaoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Transação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{isCompra ? "Vendedor" : "Comprador"}</Label>
+              <select
+                value={editForm.parceiro_id}
+                onChange={(e) => setEditForm({ ...editForm, parceiro_id: e.target.value })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione...</option>
+                {parceiros?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} {p.cpf_cnpj ? `(${p.cpf_cnpj})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Data de Negociação</Label>
+                <Input
+                  type="date"
+                  value={editForm.data_negociacao}
+                  onChange={(e) => setEditForm({ ...editForm, data_negociacao: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <select
+                  value={editForm.forma_pagamento}
+                  onChange={(e) => setEditForm({ ...editForm, forma_pagamento: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="pix">PIX</option>
+                  <option value="dinheiro">Dinheiro</option>
+                  <option value="permuta">Permuta</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="boleto">Boleto</option>
+                  <option value="promissoria">Promissória</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="pendente">Pendente</option>
+                  <option value="finalizada">Finalizada</option>
+                  <option value="cancelada">Cancelada</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Link Nota Fiscal</Label>
+              <Input
+                value={editForm.nota_fiscal_url}
+                onChange={(e) => setEditForm({ ...editForm, nota_fiscal_url: e.target.value })}
+                placeholder="https://"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Link GTA</Label>
+              <Input
+                value={editForm.gta_url}
+                onChange={(e) => setEditForm({ ...editForm, gta_url: e.target.value })}
+                placeholder="https://"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                value={editForm.observacoes}
+                onChange={(e) => setEditForm({ ...editForm, observacoes: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTransacaoOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdateTransacao} disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteTransacaoOpen}
+        onOpenChange={setDeleteTransacaoOpen}
+        title="Excluir Transação"
+        description="Tem certeza que deseja EXCLUIR esta transação? Isso removeráá as parcelas e reverteráá o vínculo dos animais."
+        onConfirm={confirmDeleteTransacao}
+      />
     </div>
   );
 }
